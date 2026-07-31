@@ -1,0 +1,120 @@
+.flabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.fcontrol {
+  border: 1.5px solid var(--green-200);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-family: var(--font-body);
+  font-size: 0.83rem;
+  width: 100%;
+  color: var(--text);
+  background: var(--white);
+  outline: none;
+  transition: var(--t);
+}
+
+.fcontrol:focus {
+  border-color: var(--green-500);
+  box-shadow: 0 0 0 3px rgba(73, 96, 76, 0.1);
+}
+
+.fcontrol[readonly] {
+  background: var(--green-100);
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.edit-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.edit-field-grid.full {
+  grid-template-columns: 1fr;
+}
+
+.med-item {
+  background: var(--white);
+  border: 1px solid var(--green-200);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+}
+
+.med-item span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.edit-section-card {
+  background: var(--white);
+  border: 1px solid var(--green-200);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-top: 16px;
+}
+
+.edit-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+
+.edit-section-empty {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.edit-section-empty i {
+  font-size: 1.8rem;
+  display: block;
+  margin-bottom: 8px;
+  opacity: 0.6;
+}
+.edit-section-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.edit-section-row .edit-section-card {
+  margin-top: 0;
+}
+.edit-body-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.edit-main-col {
+  flex: 2;
+  min-width: 0;
+}
+
+.edit-side-col {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.fcontrol-highlight {
+  background: #fdf3e7 !important;
+  border-color: #f0ddc0 !important;
+}

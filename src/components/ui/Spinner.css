@@ -1,0 +1,58 @@
+.spinner-u-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner-u-overlay.plain {
+  background: rgba(46, 55, 45, 0.08);
+  backdrop-filter: blur(3px);
+}
+
+.spinner-u-overlay.card {
+  background: rgba(246, 247, 240, 0.78);
+  backdrop-filter: blur(3px);
+  z-index: 9000;
+}
+
+.spinner-u-ring {
+  width: 52px;
+  height: 52px;
+  border: 4px solid var(--green-200);
+  border-top-color: var(--green-500);
+  border-radius: 50%;
+  animation: spinnerURotate 0.8s linear infinite;
+}
+
+.spinner-u-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 34px 50px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(60, 52, 38, 0.15);
+  border-top: 3px solid var(--gold-500);
+}
+
+.spinner-u-card .spinner-u-ring {
+  width: 44px;
+  height: 44px;
+  border-color: var(--gold-300);
+  border-top-color: var(--green-500);
+  margin: 0 auto 14px;
+}
+
+.spinner-u-card-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+  font-weight: 500;
+}
+
+@keyframes spinnerURotate {
+  to {
+    transform: rotate(360deg);
+  }
+}

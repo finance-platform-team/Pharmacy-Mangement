@@ -1,0 +1,19 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background: linear-gradient(135deg, #f6f7f0 0%, #efe2ce 100%);
+  background-attachment: fixed;
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 13px;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}

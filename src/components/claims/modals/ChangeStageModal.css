@@ -1,0 +1,41 @@
+.stage-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.stage-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  border: none;
+  border-left: 4px solid transparent;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  border-bottom: 1px solid var(--green-100);
+}
+
+.stage-item:hover {
+  background: var(--green-100);
+  border-left-color: var(--green-500);
+}
+
+.stage-item .sbadge {
+  width: 75px;
+  text-align: center;
+}
+
+.stage-item-label {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--green-600);
+  flex: 1;
+}
+
+.stage-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
