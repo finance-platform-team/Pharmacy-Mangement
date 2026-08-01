@@ -3,6 +3,8 @@ import type { Visit } from "../../domain/types";
 import { calcWait, formatWaitLive, rowCssClass, queueDisplayForClaim } from "../../domain/queue";
 import { DELIVERY_AND_CHRONIC_LABEL } from "../../domain/status";
 import { usePrintPrescription } from "../../hooks/usePrintPrescription.tsx";
+import { useBusinessUnitContext } from "../../BusinessUnitContext";
+import { ALL_LABEL } from "../shared/BuSelector";
 
 function cleanNotes(s: string): string {
   if (!s) return "";
@@ -22,6 +24,8 @@ interface ClaimRowProps {
   onAttend: (visit: Visit) => void;
   onPending: (visit: Visit) => void;
   onApprove: (visit: Visit) => void;
+    onPreparing: (visit: Visit) => void;
+
   onDispense: (visit: Visit) => void;
   onOpenRevert: (visit: Visit) => void;
   onOpenCancel: (visit: Visit) => void;
@@ -35,6 +39,8 @@ export default function ClaimRow({
   onAttend,
   onPending,
   onApprove,
+    onPreparing,
+
   onDispense,
   onOpenRevert,
   onOpenCancel,
@@ -46,7 +52,10 @@ export default function ClaimRow({
   // value it had on the last render.
   const [, forceTick] = useState(0);
   const { printPrescription } = usePrintPrescription();
-
+  const { selectedBuName, ARC_GUID } = useBusinessUnitContext();
+const isArc =
+    selectedBuName.toUpperCase() === "ARC" ||
+    (selectedBuName === ALL_LABEL && !!ARC_GUID && c.businessUnit === ARC_GUID);
   useEffect(() => {
     const isLive =
       c.attended || c.status === "Attended" || c.status === "Pending" ||
@@ -72,10 +81,11 @@ export default function ClaimRow({
   const canAttend = !att && !dis && !can;
   const canPending = c.status === "Attended" && medsChecked;
   const canApprove = c.status === "Pending" && medsChecked;
-  // NOTE: ARC-specific "Preparing" branch from the old file is deferred
-  // to Phase 11 (business-unit logic). Dispense currently only follows
-  // the non-ARC path: Approved -> Dispensed.
-  const canDispense = medsChecked && c.status === "Approved";
+  // ARC branches through an extra "Preparing" stage before Dispensed;
+  // every other branch skips it (Approved -> Dispensed directly).
+  const canPreparing = isArc && c.status === "Approved" && medsChecked;
+  const canDispense =
+    medsChecked && (isArc ? c.status === "Preparing" : c.status === "Approved");
 
   const wm = calcWait(c);
   let waitContent: React.ReactNode;
@@ -205,15 +215,17 @@ export default function ClaimRow({
           >
             <i className="bi bi-check-circle" /> Approve
           </button>
-          <button
-            type="button"
-            className="btn-t btn-preparing"
-            disabled
-            title="Coming in Phase 11 (BU logic)"
-            style={{ color: "#0284c7" }}
-          >
-            <i className="bi bi-box-seam" /> Preparing
-          </button>
+         {isArc && (
+            <button
+              type="button"
+              className="btn-t btn-preparing"
+              disabled={!canPreparing || busy}
+              onClick={() => onPreparing(c)}
+              style={{ color: "#0284c7" }}
+            >
+              <i className="bi bi-box-seam" /> Preparing
+            </button>
+          )}
           <button
             type="button"
             className="btn-t btn-dispense"

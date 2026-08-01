@@ -1,5 +1,8 @@
+import { useEffect } from "react";
 import type { FilterState } from "../../domain/filters";
 import Button from "../ui/Button";
+import { useBusinessUnitContext } from "../../BusinessUnitContext";
+import { ALL_LABEL } from "../shared/BuSelector";
 import "./FilterBar.css";
 
 interface FilterBarProps {
@@ -9,7 +12,6 @@ interface FilterBarProps {
   onFiltersChange: (filters: FilterState) => void;
   onRefresh: () => void;
   onSearchVisits: () => void;
-
 }
 
 export default function FilterBar({
@@ -20,6 +22,16 @@ export default function FilterBar({
   onRefresh,
   onSearchVisits,
 }: FilterBarProps) {
+  const { selectedBuName } = useBusinessUnitContext();
+  const isArc = selectedBuName.toUpperCase() === "ARC" || selectedBuName === ALL_LABEL;
+
+  useEffect(() => {
+    if (!isArc && filters.status === "Preparing") {
+      onFiltersChange({ ...filters, status: undefined });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isArc]);
+
   function updateFilter(key: keyof FilterState, value: string) {
     onFiltersChange({ ...filters, [key]: value || undefined });
   }
@@ -67,7 +79,7 @@ export default function FilterBar({
             <option value="Attended">Attended</option>
             <option value="Pending">Pending</option>
             <option value="Approved">Approved</option>
-            <option value="Preparing">Preparing</option>
+            {isArc && <option value="Preparing">Preparing</option>}
             <option value="Dispensed">Dispensed</option>
             <option value="Cancelled">Cancelled</option>
           </select>

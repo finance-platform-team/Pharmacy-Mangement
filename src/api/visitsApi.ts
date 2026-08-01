@@ -35,6 +35,17 @@ export async function approveVisit(visitId: string, userId: string) {
     ...(userId ? { "crf79_approvedby@odata.bind": userBind(userId) } : {}),
   });
 }
+export async function preparingVisit(visitId: string, userId: string) {
+  const data = {
+    crf79_status: STATUS.PREPARING,
+    crf79_preparingat: nowIso(),
+    ...(userId ? { "crf79_PreparingBy@odata.bind": userBind(userId) } : {}),
+  };
+  console.log("[preparingVisit] Sending payload:", JSON.stringify(data), "userId:", userId);
+  const result = await Crf79_visitsesService.update(visitId, data);
+  console.log("[preparingVisit] Update result:", result);
+  return result;
+}
 
 /**
  * Dispense also freezes the elapsed-time metrics, mirroring the old

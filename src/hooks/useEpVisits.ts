@@ -6,8 +6,11 @@ import { mapVisit } from "../domain/mappers";
 import type { Visit } from "../domain/types";
 import { getLocalDateStr } from "../utils/format";
 import { Crf79_medicationsesService } from "../generated/services/Crf79_medicationsesService";
-
 import type { Crf79_medicationses } from "../generated/models/Crf79_medicationsesModel";
+import { useBusinessUnitContext } from "../BusinessUnitContext";
+
+const AUTO_REFRESH_MS = 5000;
+
 const EP_SELECT = [
   "crf79_visitsid",
   "crf79_visitid",
@@ -25,7 +28,7 @@ const EP_SELECT = [
 ];
 
 /** EP entries have crf79_status = null, and default to today's date range. */
-function buildEpFilter(from?: string, to?: string): string {
+function buildEpFilter(from: string | undefined, to: string | undefined, buFilter: string | null): string {
   const dateFilter: string[] = [];
   if (from) dateFilter.push(`modifiedon ge ${new Date(`${from}T00:00:00`).toISOString()}`);
   if (to) dateFilter.push(`modifiedon le ${new Date(`${to}T23:59:59`).toISOString()}`);
@@ -38,7 +41,28 @@ function buildEpFilter(from?: string, to?: string): string {
     dateFilter.push(`modifiedon ge ${new Date(`${yesterdayStr}T00:00:00`).toISOString()}`);
   }
 
-  return `crf79_status eq null and (${dateFilter.join(" and ")})`;
+  const base = `crf79_status eq null and (${dateFilter.join(" and ")})`;
+  return buFilter ? `${base} and ${buFilter}` : base;
+}
+
+/**
+ * Same combined-BU logic as the old file (line 5196-5202): if the
+ * selected branch is SMH exactly, expand the filter to (SMH or ARC or AAC).
+ * Otherwise just filter by the selected branch id.
+ * Returns null if no branch is selected yet (no BU filter applied).
+ */
+function buildBuFilter(
+  selectedBuId: string,
+  ARC_GUID: string | null,
+  AAC_GUID: string | null,
+  SMH_GUID: string | null,
+): string | null {
+  if (!selectedBuId || selectedBuId === "ALL") return null;
+
+  if (SMH_GUID && selectedBuId === SMH_GUID && ARC_GUID && AAC_GUID) {
+    return `(_new_bu_value eq ${SMH_GUID} or _new_bu_value eq ${ARC_GUID} or _new_bu_value eq ${AAC_GUID})`;
+  }
+  return `(_new_bu_value eq ${selectedBuId})`;
 }
 
 async function fetchPatientsByIds(
@@ -115,6 +139,7 @@ export function useEpVisits(): UseEpVisitsResult {
   const [reloadToken, setReloadToken] = useState(0);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const { selectedBuId, ARC_GUID, AAC_GUID, SMH_GUID } = useBusinessUnitContext();
 
   const reload = useCallback(() => setReloadToken((n) => n + 1), []);
   const setDateRange = useCallback((from: string, to: string) => {
@@ -125,13 +150,18 @@ export function useEpVisits(): UseEpVisitsResult {
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
-      setLoading(true);
-      setError(null);
+    // silent = true: background refresh, no spinner, errors swallowed
+    // (so it never disrupts what the user is currently looking at).
+    async function load(silent: boolean) {
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
       try {
+        const buFilter = buildBuFilter(selectedBuId, ARC_GUID, AAC_GUID, SMH_GUID);
         const result = await Crf79_visitsesService.getAll({
           select: EP_SELECT,
-          filter: buildEpFilter(dateFrom, dateTo),
+          filter: buildEpFilter(dateFrom, dateTo, buFilter),
           orderBy: ["modifiedon desc"],
           top: 1000,
         });
@@ -155,22 +185,28 @@ export function useEpVisits(): UseEpVisitsResult {
           mapVisit(
             v,
             patientsById[v._crf79_patient_value ?? ""],
-            medsByVisit[v.crf79_visitsid] ??   [],
+            medsByVisit[v.crf79_visitsid] ?? [],
           ),
         );
         setVisits(mapped);
       } catch (err) {
-        if (!cancelled) setError(String(err));
+        if (!cancelled && !silent) setError(String(err));
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && !silent) setLoading(false);
       }
     }
 
-    load();
+    load(false);
+
+    const intervalId = setInterval(() => {
+      load(true);
+    }, AUTO_REFRESH_MS);
+
     return () => {
       cancelled = true;
+      clearInterval(intervalId);
     };
-  }, [reloadToken, dateFrom, dateTo]);
+  }, [reloadToken, dateFrom, dateTo, selectedBuId, ARC_GUID, AAC_GUID, SMH_GUID]);
 
   return { visits, loading, error, reload, setDateRange };
 }

@@ -21,6 +21,7 @@ import { saveUnavailableMedications } from "../../api/medsApi";
 import { getLogicalDateStr } from "../../utils/format";
 import type { SortState } from "../../domain/filters";
 import GetPatientPrescriptionModal from "../shared/GetPatientPrescriptionModal";
+import ApproveModal from "./modals/ApproveModal";
 
 const PER_PAGE = 20;
 
@@ -28,7 +29,7 @@ export default function ClaimsScreen() {
   const { systemUserId } = useCurrentUser();
   const { visits, loading, error, reload } = useVisits();
   const { toasts, showToast } = useToast();
-  const { attend, pending, approve, dispense, changeStage, cancel, busyId } =
+  const { attend, pending, approve, preparing, dispense, changeStage, cancel, busyId } =
     useVisitActions({ showToast, reload });
 
   const [stageModalVisit, setStageModalVisit] = useState<Visit | null>(null);
@@ -43,6 +44,14 @@ export default function ClaimsScreen() {
   const [availModalVisit, setAvailModalVisit] = useState<Visit | null>(null);
   const [sort, setSort] = useState<SortState | undefined>(undefined);
   const [pvModalOpen, setPvModalOpen] = useState(false);
+  const [approveModalVisit, setApproveModalVisit] = useState<Visit | null>(null);
+
+function handleApproveConfirm() {
+  if (approveModalVisit) {
+    approve(approveModalVisit);
+  }
+  setApproveModalVisit(null);
+}
 
   function handleSortToggle(column: "queue" | "wait") {
     setSort((prev) => {
@@ -156,7 +165,8 @@ export default function ClaimsScreen() {
         onSortToggle={handleSortToggle}
         onAttend={attend}
         onPending={pending}
-        onApprove={approve}
+        onApprove={setApproveModalVisit}
+        onPreparing={preparing}
         onDispense={dispense}
         onOpenRevert={setStageModalVisit}
         onOpenCancel={setCancelModalVisit}
@@ -164,6 +174,13 @@ export default function ClaimsScreen() {
         onOpenEdit={setEditModalVisit}
       />
 
+<ApproveModal
+        open={!!approveModalVisit}
+        visit={approveModalVisit}
+        busy={approveModalVisit ? busyId === approveModalVisit.id : false}
+        onClose={() => setApproveModalVisit(null)}
+        onConfirm={handleApproveConfirm}
+      />
       <ChangeStageModal
         open={!!stageModalVisit}
         visit={stageModalVisit}

@@ -11,6 +11,8 @@ interface ClaimsTableProps {
   onAttend: (visit: Visit) => void;
   onPending: (visit: Visit) => void;
   onApprove: (visit: Visit) => void;
+    onPreparing: (visit: Visit) => void;
+
   onDispense: (visit: Visit) => void;
   onOpenRevert: (visit: Visit) => void;
   onOpenCancel: (visit: Visit) => void;
@@ -26,6 +28,8 @@ export default function ClaimsTable({
   onAttend,
   onPending,
   onApprove,
+    onPreparing,
+
   onDispense,
   onOpenRevert,
   onOpenCancel,
@@ -75,6 +79,8 @@ export default function ClaimsTable({
                 onAttend={onAttend}
                 onPending={onPending}
                 onApprove={onApprove}
+                                onPreparing={onPreparing}
+
                 onDispense={onDispense}
                 onOpenRevert={onOpenRevert}
                 onOpenCancel={onOpenCancel}

@@ -1,0 +1,28 @@
+.bu-startup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.bu-startup-btn {
+  padding: 20px 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: 2px solid var(--border-color, #ddd);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bu-startup-btn:hover {
+  border-color: var(--primary-color, #0d6efd);
+  background: var(--primary-bg-light, #f0f6ff);
+}
+
+.bu-startup-loading {
+  text-align: center;
+  padding: 16px 0;
+  color: #666;
+}

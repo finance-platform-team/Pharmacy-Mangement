@@ -1,21 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { Crf79_visitsesService } from "../generated/services/Crf79_visitsesService";
 import { Crf79_patientsesService } from "../generated/services/Crf79_patientsesService";
-import type { Crf79_patientses } from "../generated//models/Crf79_patientsesModel";
+import type { Crf79_patientses } from "../generated/models/Crf79_patientsesModel";
 import { mapVisit } from "../domain/mappers";
 import type { Visit } from "../domain/types";
 import { getLocalDateStr } from "../utils/format";
+import { useBusinessUnitContext } from "../BusinessUnitContext";
 
-/**
- * Builds the same "active window" filter as the old loadAllData():
- * - Draft/Attended/Approved/Pending/Preparing visits from the last 72 hours
- * - Dispensed/Cancelled visits, but only if modified today
- *
- * NOTE: delta-loading, load-more (Dataverse nextLink pagination), and
- * per-business-unit parallel fetching from the old file are intentionally
- * left out of this first version - deferred to Phase 11 (polling/refresh).
- */
-function buildClaimsFilter(): string {
+const AUTO_REFRESH_MS = 5000;
+
+function buildClaimsFilter(buFilter: string | null): string {
   const activeStatuses =
     "(crf79_status eq 1 or crf79_status eq 2 or crf79_status eq 3 or crf79_status eq 5 or crf79_status eq 6)";
 
@@ -28,7 +22,22 @@ function buildClaimsFilter(): string {
   const todayStartIso = new Date(`${todayStr}T00:00:00`).toISOString();
   const finished = `((crf79_status eq 4 or crf79_status eq 0) and modifiedon ge ${todayStartIso})`;
 
-  return `crf79_status ne null and (${activeTimed} or ${finished})`;
+  const base = `crf79_status ne null and (${activeTimed} or ${finished})`;
+  return buFilter ? `${base} and ${buFilter}` : base;
+}
+
+function buildBuFilter(
+  selectedBuId: string,
+  ARC_GUID: string | null,
+  AAC_GUID: string | null,
+  SMH_GUID: string | null,
+): string | null {
+  if (!selectedBuId || selectedBuId === "ALL") return null;
+
+  if (SMH_GUID && selectedBuId === SMH_GUID && ARC_GUID && AAC_GUID) {
+    return `(_new_bu_value eq ${SMH_GUID} or _new_bu_value eq ${ARC_GUID} or _new_bu_value eq ${AAC_GUID})`;
+  }
+  return `(_new_bu_value eq ${selectedBuId})`;
 }
 
 const VISIT_SELECT = [
@@ -70,11 +79,7 @@ const VISIT_SELECT = [
   "_crf79_preparingby_value",
   "_modifiedby_value",
 ];
-/**
- * Fetches the patient records referenced by a set of visits, so we can
- * join the real patient name/phone/etc (the visit's own crf79_patientname
- * field is not reliable — patient data lives on crf79_patients).
- */
+
 async function fetchPatientsByIds(
   patientIds: string[],
 ): Promise<Record<string, Crf79_patientses>> {
@@ -114,19 +119,25 @@ export function useVisits(): UseVisitsResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const { selectedBuId, ARC_GUID, AAC_GUID, SMH_GUID } = useBusinessUnitContext();
 
   const reload = useCallback(() => setReloadToken((n) => n + 1), []);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
-      setLoading(true);
-      setError(null);
+    // silent = true: background refresh, no spinner, errors swallowed
+    // (so it never disrupts what the user is currently looking at).
+    async function load(silent: boolean) {
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
       try {
+        const buFilter = buildBuFilter(selectedBuId, ARC_GUID, AAC_GUID, SMH_GUID);
         const result = await Crf79_visitsesService.getAll({
           select: VISIT_SELECT,
-          filter: buildClaimsFilter(),
+          filter: buildClaimsFilter(buFilter),
           orderBy: ["modifiedon desc"],
           top: 1000,
         });
@@ -151,17 +162,23 @@ export function useVisits(): UseVisitsResult {
         );
         setVisits(mapped);
       } catch (err) {
-        if (!cancelled) setError(String(err));
+        if (!cancelled && !silent) setError(String(err));
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && !silent) setLoading(false);
       }
     }
 
-    load();
+    load(false);
+
+    const intervalId = setInterval(() => {
+      load(true);
+    }, AUTO_REFRESH_MS);
+
     return () => {
       cancelled = true;
+      clearInterval(intervalId);
     };
-  }, [reloadToken]);
+  }, [reloadToken, selectedBuId, ARC_GUID, AAC_GUID, SMH_GUID]);
 
   return { visits, loading, error, reload };
 }

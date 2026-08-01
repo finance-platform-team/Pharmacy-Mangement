@@ -10,7 +10,7 @@ import {
   type PhysicianOption,
   type ContractorOption,
 } from "../../api/opdApi";
-import { useBusinessUnit } from "../../hooks/useBusinessUnit";
+import { useBusinessUnitContext } from "../../BusinessUnitContext";
 import "./EpManual.css";
 
 interface EpManualProps {
@@ -34,7 +34,7 @@ const NOTES_OPTIONS = [
 ];
 
 export default function EpManual({ userId, showToast, onCancel, onCreated }: EpManualProps) {
-  const { units } = useBusinessUnit();
+  const { units, selectedBuId } = useBusinessUnitContext();
 
   const [mode, setMode] = useState<Mode>("external");
   const [searchedOpd, setSearchedOpd] = useState(false);
@@ -48,7 +48,7 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
   const [company, setCompany] = useState("");
   const [companyLocked, setCompanyLocked] = useState(false);
   const [subcontractor, setSubcontractor] = useState("");
-  const [locationId, setLocationId] = useState("");
+  const [locationId, setLocationId] = useState(selectedBuId);
   const [diagnosis, setDiagnosis] = useState("");
   const [notes, setNotes] = useState("");
   const [specialNotes, setSpecialNotes] = useState("");

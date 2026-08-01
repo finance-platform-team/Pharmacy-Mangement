@@ -3,6 +3,8 @@ import {
   attendVisit,
   pendingVisit,
   approveVisit,
+    preparingVisit,
+
   dispenseVisit,
   changeStageVisit,
   cancelVisit,
@@ -58,6 +60,10 @@ export function useVisitActions({ showToast, reload }: UseVisitActionsOptions) {
     (visit: Visit) => run(visit.id, "Approved", () => approveVisit(visit.id, systemUserId)),
     [systemUserId],
   );
+  const preparing = useCallback(
+    (visit: Visit) => run(visit.id, "Preparing", () => preparingVisit(visit.id, systemUserId)),
+    [systemUserId],
+  );
 
   const dispense = useCallback(
     (visit: Visit) =>
@@ -87,5 +93,4 @@ export function useVisitActions({ showToast, reload }: UseVisitActionsOptions) {
     [systemUserId],
   );
 
-  return { attend, pending, approve, dispense, changeStage, cancel, busyId };
-}
+return { attend, pending, approve, preparing, dispense, changeStage, cancel, busyId };}
