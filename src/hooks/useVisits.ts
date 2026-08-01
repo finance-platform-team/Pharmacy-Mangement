@@ -146,13 +146,6 @@ export function useVisits(): UseVisitsResult {
         const patientsById = await fetchPatientsByIds(patientIds);
         if (cancelled) return;
 
-        // TEMP DEBUG — remove after we confirm the BU annotation key for
-        // manually-created (crf79_manual === true) visits.
-        const manualRaw = rawVisits.find((v) => v.crf79_manual === true);
-        if (manualRaw) {
-          console.log("RAW DEBUG (manual visit):", JSON.stringify(manualRaw, null, 2));
-        }
-
         const mapped = rawVisits.map((v) =>
           mapVisit(v, patientsById[v._crf79_patient_value ?? ""]),
         );
