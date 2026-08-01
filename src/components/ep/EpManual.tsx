@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Button from "../ui/Button";
+import Icon from "../ui/Icon";
 import SearchableSelect from "../ui/SearchableSelect";
 import { createManualPrescription, waitForQueueNo } from "../../api/epApi";
 import {
@@ -254,7 +255,7 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
   return (
     <div className="manual-form-card">
       <div className="manual-form-header">
-        <i className="bi bi-file-earmark-medical-fill" /> Create Manual Prescription
+        <Icon name="file-earmark-medical-fill" /> Create Manual Prescription
       </div>
 
       <div className="manual-form-notice">
@@ -265,7 +266,7 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
 
       <div className="manual-form-body">
         <div className="manual-type-toggle">
-          <i className="bi bi-toggle2-off" />
+          <Icon name="toggle2-off" />
           <div style={{ flex: 1 }}>
             <div className="manual-type-toggle-label">Prescription Type</div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -274,14 +275,14 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
                 className={`manual-type-btn ${mode === "opd" ? "active" : ""}`}
                 onClick={() => handleModeChange("opd")}
               >
-                <i className="bi bi-search" /> OPD Search
+                <Icon name="search" /> OPD Search
               </button>
               <button
                 type="button"
                 className={`manual-type-btn ${mode === "external" ? "active" : ""}`}
                 onClick={() => handleModeChange("external")}
               >
-                <i className="bi bi-pencil-square" /> External
+                <Icon name="pencil-square" /> External
               </button>
             </div>
           </div>
@@ -303,7 +304,7 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
             />
             {errors.name && (
               <p className="manual-field-error">
-                <i className="bi bi-exclamation-circle-fill" /> Patient name is required.
+                <Icon name="exclamation-circle-fill" /> Patient name is required.
               </p>
             )}
           </div>
@@ -336,7 +337,7 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
             )}
             {errors.phone && (
               <p className="manual-field-error">
-                <i className="bi bi-exclamation-circle-fill" /> Phone is required.
+                <Icon name="exclamation-circle-fill" /> Phone is required.
               </p>
             )}
 
@@ -378,7 +379,7 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
             </select>
             {errors.location && (
               <p className="manual-field-error">
-                <i className="bi bi-exclamation-circle-fill" /> Branch is required.
+                <Icon name="exclamation-circle-fill" /> Branch is required.
               </p>
             )}
           </div>
@@ -422,7 +423,7 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
             )}
             {errors.doctor && (
               <p className="manual-field-error">
-                <i className="bi bi-exclamation-circle-fill" /> Doctor name is required.
+                <Icon name="exclamation-circle-fill" /> Doctor name is required.
               </p>
             )}
           </div>
@@ -460,7 +461,7 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
             )}
             {errors.company && (
               <p className="manual-field-error">
-                <i className="bi bi-exclamation-circle-fill" /> Company is required.
+                <Icon name="exclamation-circle-fill" /> Company is required.
               </p>
             )}
           </div>
@@ -506,7 +507,7 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
 
         {errors.submit && (
           <p className="manual-field-error">
-            <i className="bi bi-exclamation-circle-fill" /> Could not create prescription. Please try again.
+            <Icon name="exclamation-circle-fill" /> Could not create prescription. Please try again.
           </p>
         )}
       </div>

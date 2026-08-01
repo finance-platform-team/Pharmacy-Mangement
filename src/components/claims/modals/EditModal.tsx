@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Modal from "../../ui/Modal";
 import Button from "../../ui/Button";
+import Icon from "../../ui/Icon";
 import type { Visit } from "../../../domain/types";
 import { updateVisitDetails, updatePatientAddress } from "../../../api/visitsApi";
 import { fetchMedicationsForVisit } from "../../../api/medsApi";
@@ -61,12 +62,6 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
   const [saving, setSaving] = useState(false);
   const [showPrintQueue, setShowPrintQueue] = useState(false);
 
-  // The Claims list (useVisits.ts) doesn't load medications up front —
-  // fetch them here on demand if they're missing, same pattern used by
-  // AvailModal / UnavailMedsModal / print. The initial useState below
-  // already covers the "already have them" case (this component remounts
-  // fresh per visit via key={visit.id} in EditModal), so the effect only
-  // ever needs to run the async fetch — never a synchronous setState.
   const [medications, setMedications] = useState(visit.medications);
   const [medsLoading, setMedsLoading] = useState(visit.medications.length === 0);
 
@@ -132,13 +127,12 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
           background: "rgba(184,62,62,.09)", border: "1.5px solid rgba(184,62,62,.3)",
           borderRadius: 8, color: "#b83e3e", fontSize: 13, fontWeight: 500,
         }}>
-          <i className="bi bi-x-circle me-1" /> This visit is cancelled — fields are read-only.
+          <Icon name="x-circle" className="me-1" /> This visit is cancelled — fields are read-only.
         </div>
       )}
 
       <div className="edit-body-row">
         <div className="edit-main-col">
-          {/* Row 1: Patient Name / Phone */}
           <div className="edit-field-grid">
             <div>
               <label className="flabel">Patient Name</label>
@@ -150,7 +144,6 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
             </div>
           </div>
 
-          {/* Row 2: Visit ID / Total Est. Price */}
           <div className="edit-field-grid">
             <div>
               <label className="flabel">Visit ID</label>
@@ -166,7 +159,6 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
             </div>
           </div>
 
-          {/* Row 3: Diagnosis (full width) */}
           <div className="edit-field-grid full">
             <div>
               <label className="flabel">Diagnosis</label>
@@ -174,7 +166,6 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
             </div>
           </div>
 
-          {/* Row 3b: Branch (BU) */}
           <div className="edit-field-grid">
             <div>
               <label className="flabel">Branch (BU)</label>
@@ -182,7 +173,6 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
             </div>
           </div>
 
-          {/* Row 4: Company / Subcontractor */}
           <div className="edit-field-grid">
             <div>
               <label className="flabel">Company</label>
@@ -194,7 +184,6 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
             </div>
           </div>
 
-          {/* Row 5: Physician / Specialty (or Doctor Name / Specialty for manual) */}
           <div className="edit-field-grid">
             {visit.manual ? (
               <>
@@ -221,7 +210,6 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
             )}
           </div>
 
-          {/* Row 6: Delivery & Chronic / Address */}
           <div className="edit-field-grid">
             <div>
               <label className="flabel">Delivery & Chronic</label>
@@ -245,7 +233,6 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
             )}
           </div>
 
-          {/* Row 7: Delivery Status / Chronic Status / Refill Day */}
           {(showDelivery || showChronic || showRefill) && (
             <div className="edit-field-grid">
               {showDelivery && (
@@ -285,7 +272,6 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
             </div>
           )}
 
-          {/* Row 8: Notes (full width) */}
           <div className="edit-field-grid full">
             <div>
               <label className="flabel">Notes</label>
@@ -298,7 +284,6 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
             </div>
           </div>
 
-          {/* Row 9: Special Notes (full width) */}
           <div className="edit-field-grid full">
             <div>
               <label className="flabel">Special Notes</label>
@@ -316,16 +301,16 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
     <div className="edit-side-col">
           <div className="edit-section-card">
             <div className="edit-section-title">
-              <i className="bi bi-capsule-pill" /> Medications
+              <Icon name="capsule-pill" /> Medications
             </div>
             {medsLoading ? (
               <div className="edit-section-empty">
-                <i className="bi bi-hourglass-split" />
+                <Icon name="hourglass-split" />
                 Loading medications…
               </div>
             ) : medications.length === 0 ? (
               <div className="edit-section-empty">
-                <i className="bi bi-info-circle" />
+                <Icon name="info-circle" />
                 {isExternalManual ? "External Claim (No DotCare Sync Available)" : "No medications listed."}
               </div>
             ) : (
@@ -343,7 +328,7 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
 
           <div className="edit-section-card">
             <div className="edit-section-title">
-              <i className="bi bi-clock-history" /> Timeline
+              <Icon name="clock-history" /> Timeline
             </div>
             <TimelineView visit={visit} />
           </div>
@@ -418,7 +403,7 @@ function TimelineView({ visit }: { visit: Visit }) {
           <div style={{ fontSize: 12, fontWeight: 600, color: "#1e293b" }}>{s.label}</div>
           {s.time && (
             <div style={{ fontSize: 11, color: "#64748b" }}>
-              <i className="bi bi-clock me-1" />{s.time}
+              <Icon name="clock" className="me-1" />{s.time}
             </div>
           )}
           {s.user && (

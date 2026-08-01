@@ -1,6 +1,6 @@
 import { buildPageTokens } from "../../domain/pagination";
 import "./Pagination.css";
-
+import Icon from "./Icon";
 interface PaginationProps {
   current: number;
   perPage: number;
@@ -32,7 +32,7 @@ export default function Pagination({
           disabled={current === 1}
           onClick={() => onPageChange(current - 1)}
         >
-          <i className="bi bi-chevron-left" />
+          <Icon name="chevron-left" />
         </button>
 
         {tokens.map((t, i) =>
@@ -57,7 +57,7 @@ export default function Pagination({
           disabled={current === totalPages}
           onClick={() => onPageChange(current + 1)}
         >
-          <i className="bi bi-chevron-right" />
+          <Icon name="chevron-right" />
         </button>
       </div>
     </div>

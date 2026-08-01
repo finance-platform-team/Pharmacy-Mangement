@@ -1,6 +1,7 @@
 import type { Visit } from "../../domain/types";
 import type { SortState } from "../../domain/filters";
 import ClaimRow from "./ClaimRow";
+import Icon from "../ui/Icon";
 import "./ClaimsTable.css";
 
 interface ClaimsTableProps {
@@ -11,8 +12,7 @@ interface ClaimsTableProps {
   onAttend: (visit: Visit) => void;
   onPending: (visit: Visit) => void;
   onApprove: (visit: Visit) => void;
-    onPreparing: (visit: Visit) => void;
-
+  onPreparing: (visit: Visit) => void;
   onDispense: (visit: Visit) => void;
   onOpenRevert: (visit: Visit) => void;
   onOpenCancel: (visit: Visit) => void;
@@ -28,8 +28,7 @@ export default function ClaimsTable({
   onAttend,
   onPending,
   onApprove,
-    onPreparing,
-
+  onPreparing,
   onDispense,
   onOpenRevert,
   onOpenCancel,
@@ -50,7 +49,7 @@ export default function ClaimsTable({
               <th className="sortable-th" onClick={() => onSortToggle("queue")}>
                 Queue #{" "}
                 {sort?.column === "queue" && (
-                  <i className={`bi bi-sort-${sort.direction === "asc" ? "down" : "up-alt"}`} />
+                  <Icon name={`sort-${sort.direction === "asc" ? "down" : "up-alt"}`} />
                 )}
               </th>
               <th>Status</th>
@@ -59,7 +58,7 @@ export default function ClaimsTable({
               <th className="c sortable-th" onClick={() => onSortToggle("wait")}>
                 Wait Time{" "}
                 {sort?.column === "wait" && (
-                  <i className={`bi bi-sort-${sort.direction === "asc" ? "down" : "up-alt"}`} />
+                  <Icon name={`sort-${sort.direction === "asc" ? "down" : "up-alt"}`} />
                 )}
               </th>
               <th>Specialty</th>
@@ -79,8 +78,7 @@ export default function ClaimsTable({
                 onAttend={onAttend}
                 onPending={onPending}
                 onApprove={onApprove}
-                                onPreparing={onPreparing}
-
+                onPreparing={onPreparing}
                 onDispense={onDispense}
                 onOpenRevert={onOpenRevert}
                 onOpenCancel={onOpenCancel}
@@ -93,7 +91,7 @@ export default function ClaimsTable({
 
         {claims.length === 0 && (
           <div className="empty-state">
-            <i className="bi bi-inbox" />
+            <Icon name="inbox" />
             <p>No records match the current filters.</p>
           </div>
         )}

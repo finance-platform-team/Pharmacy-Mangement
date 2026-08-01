@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useBusinessUnitContext } from "../../BusinessUnitContext";
 import "./BuSelector.css";
+import Icon from "../ui/Icon";
 
 const OPTIONS = ["ALL", "AMH", "ARC", "AAC", "ASH"];
 export  const ALL_LABEL = "All BUs";
@@ -24,8 +25,8 @@ export default function BuSelector() {
   return (
     <div className="bu-selector">
       <button className="bu-selector-btn" onClick={() => setOpen((o) => !o)}>
-        <i className="bi bi-geo-alt" /> {selectedBuName || "Select Branch"}
-        <i className="bi bi-chevron-down" />
+        <Icon name="geo-alt" /> {selectedBuName || "Select Branch"}
+        <Icon name="chevron-down" />
       </button>
 
       {open && (

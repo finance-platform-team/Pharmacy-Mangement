@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
+import Icon from "../ui/Icon";
 import {
   searchPrescriptionVisits,
   fetchPrescriptionMeds,
@@ -101,7 +102,7 @@ export default function GetPatientPrescriptionModal({
 
       {searching && (
         <div className="pv-status-box">
-          <i className="bi bi-hourglass-split" />
+          <Icon name="hourglass-split" />
           <p>Searching Visits…</p>
         </div>
       )}
@@ -203,7 +204,7 @@ export default function GetPatientPrescriptionModal({
         <div className="pv-meds-area">
           {loadingMeds && (
             <div className="pv-status-box">
-              <i className="bi bi-hourglass-split" />
+              <Icon name="hourglass-split" />
               <p>Fetching prescription from DotCare…</p>
             </div>
           )}
@@ -211,7 +212,7 @@ export default function GetPatientPrescriptionModal({
           {!loadingMeds && meds && meds.length > 0 && (
             <>
               <div className="pv-results-label">
-                <i className="bi bi-capsule" /> Medications ({meds.length})
+                <Icon name="capsule" /> Medications ({meds.length})
               </div>
               <div className="pv-table-wrap">
                 <table className="pv-results-table">

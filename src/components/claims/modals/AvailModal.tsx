@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Modal from "../../ui/Modal";
 import "./AvailModal.css";
 import Button from "../../ui/Button";
+import Icon from "../../ui/Icon";
 import type { Visit, Medication } from "../../../domain/types";
 import { fetchMedicationsForVisit, updateMedicationAvailability, saveUnavailableMedications } from "../../../api/medsApi";
 
@@ -134,7 +135,7 @@ export default function AvailModal({
 
       {!loading && meds.length === 0 && (
         <div style={{ textAlign: "center", padding: 20, color: "var(--text-muted)" }}>
-          <i className="bi bi-info-circle" style={{ fontSize: "2rem" }} />
+          <Icon name="info-circle" size={32} />
           <p style={{ marginTop: 8, fontSize: "0.85rem" }}>No medications for this visit.</p>
         </div>
       )}
@@ -146,7 +147,7 @@ export default function AvailModal({
             padding: 10, borderRadius: 8, fontSize: 12, marginBottom: 12,
             display: "flex", gap: 8, alignItems: "center",
           }}>
-            <i className="bi bi-exclamation-triangle-fill" />
+            <Icon name="exclamation-triangle-fill" />
             <span>Keep medications <strong>checked</strong> if available. Unchecked meds are recorded as shortages.</span>
           </div>
 
@@ -195,7 +196,7 @@ export default function AvailModal({
                 </div>
 
                 <span className="avail-field-label">
-                  <i className="bi bi-chat-left-text me-1" />Patient Notes
+                  <Icon name="chat-left-text" className="me-1" />Patient Notes
                 </span>
                 <input
                   type="text"
@@ -208,7 +209,7 @@ export default function AvailModal({
 
                 <div className="avail-alt-block">
                   <span style={{ fontSize: "0.67rem", fontWeight: 700, color: "#991b1b", textTransform: "uppercase" }}>
-                    <i className="bi bi-arrow-repeat" /> Alternative Medication
+                    <Icon name="arrow-repeat" /> Alternative Medication
                   </span>
                   <input
                     type="text"

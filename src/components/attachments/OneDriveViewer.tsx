@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Visit } from "../../domain/types";
 import { resolveOneDriveLink } from "../../domain/onedrive";
+import Icon from "../ui/Icon";
 import "./OneDriveViewer.css";
 
 interface OneDriveViewerProps {
@@ -19,8 +20,8 @@ export default function OneDriveViewer({ visit }: OneDriveViewerProps) {
         className="od-accordion-header"
         onClick={() => setOpen((v) => !v)}
       >
-        <i className="bi bi-cloud-arrow-up-fill" /> OneDrive Documents
-        <i className={`bi bi-chevron-${open ? "up" : "down"} od-chevron`} />
+        <Icon name="cloud-arrow-up-fill" /> OneDrive Documents
+        <Icon name={`chevron-${open ? "up" : "down"}`} className="od-chevron" />
       </button>
 
       {open && (
@@ -33,7 +34,7 @@ export default function OneDriveViewer({ visit }: OneDriveViewerProps) {
                   className="btn-t od-btn"
                   onClick={() => setFrameKey((k) => k + 1)}
                 >
-                  <i className="bi bi-arrow-clockwise" /> Refresh Frame
+                  <Icon name="arrow-clockwise" /> Refresh Frame
                 </button>
                 
                 <a  className="btn-t od-btn"
@@ -41,7 +42,7 @@ export default function OneDriveViewer({ visit }: OneDriveViewerProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <i className="bi bi-box-arrow-up-right" /> Open in Tab
+                  <Icon name="box-arrow-up-right" /> Open in Tab
                 </a>
               </div>
               <iframe
@@ -53,7 +54,7 @@ export default function OneDriveViewer({ visit }: OneDriveViewerProps) {
             </>
           ) : (
             <div className="od-empty">
-              <i className="bi bi-cloud-slash" />
+              <Icon name="cloud-slash" />
               No OneDrive link found for this visit.
             </div>
           )}

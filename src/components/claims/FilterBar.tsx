@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { FilterState } from "../../domain/filters";
 import Button from "../ui/Button";
+import Icon from "../ui/Icon";
 import { useBusinessUnitContext } from "../../BusinessUnitContext";
 import { ALL_LABEL } from "../shared/BuSelector";
 import "./FilterBar.css";
@@ -44,7 +45,7 @@ export default function FilterBar({
   return (
     <div className="search-and-filter-row">
       <div className="search-wrap">
-        <i className="bi bi-search" />
+        <Icon name="search" />
         <input
           type="text"
           className="search-input"
@@ -66,7 +67,7 @@ export default function FilterBar({
       <div className="filter-section-card">
         <div className="filter-section-row">
           <span className="filter-section-label">
-            <i className="bi bi-funnel" /> Filter by
+            <Icon name="funnel" /> Filter by
           </span>
 
           <select

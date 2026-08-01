@@ -5,6 +5,7 @@ import { DELIVERY_AND_CHRONIC_LABEL } from "../../domain/status";
 import { usePrintPrescription } from "../../hooks/usePrintPrescription.tsx";
 import { useBusinessUnitContext } from "../../BusinessUnitContext";
 import { ALL_LABEL } from "../shared/BuSelector";
+import Icon from "../ui/Icon";
 
 function cleanNotes(s: string): string {
   if (!s) return "";
@@ -24,8 +25,7 @@ interface ClaimRowProps {
   onAttend: (visit: Visit) => void;
   onPending: (visit: Visit) => void;
   onApprove: (visit: Visit) => void;
-    onPreparing: (visit: Visit) => void;
-
+  onPreparing: (visit: Visit) => void;
   onDispense: (visit: Visit) => void;
   onOpenRevert: (visit: Visit) => void;
   onOpenCancel: (visit: Visit) => void;
@@ -39,23 +39,20 @@ export default function ClaimRow({
   onAttend,
   onPending,
   onApprove,
-    onPreparing,
-
+  onPreparing,
   onDispense,
   onOpenRevert,
   onOpenCancel,
   onOpenAvail,
   onOpenEdit,
 }: ClaimRowProps) {
-  // Forces a re-render every second so the live wait-time counter
-  // (formatWaitLive) actually ticks, instead of freezing at whatever
-  // value it had on the last render.
   const [, forceTick] = useState(0);
   const { printPrescription } = usePrintPrescription();
   const { selectedBuName, ARC_GUID } = useBusinessUnitContext();
-const isArc =
+  const isArc =
     selectedBuName.toUpperCase() === "ARC" ||
     (selectedBuName === ALL_LABEL && !!ARC_GUID && c.businessUnit === ARC_GUID);
+
   useEffect(() => {
     const isLive =
       c.attended || c.status === "Attended" || c.status === "Pending" ||
@@ -74,15 +71,11 @@ const isArc =
   const att = c.attended || c.status === "Attended" || pen || apr || pre;
   const hasMeds = c.medications && c.medications.length > 0;
 
-  // Medications aren't loaded on the Claims list yet (deferred), so
-  // medsChecked defaults to true (mirrors the old !hasMeds fallback).
   const medsChecked = !hasMeds;
 
   const canAttend = !att && !dis && !can;
   const canPending = c.status === "Attended" && medsChecked;
   const canApprove = c.status === "Pending" && medsChecked;
-  // ARC branches through an extra "Preparing" stage before Dispensed;
-  // every other branch skips it (Approved -> Dispensed directly).
   const canPreparing = isArc && c.status === "Approved" && medsChecked;
   const canDispense =
     medsChecked && (isArc ? c.status === "Preparing" : c.status === "Approved");
@@ -92,7 +85,7 @@ const isArc =
   if (dis) {
     waitContent = (
       <span className="wfrozen wfrozen-dispensed">
-        <i className="bi bi-check-circle-fill me-1" />
+        <Icon name="check-circle-fill" className="me-1" />
         {c.waitMinutes != null ? c.waitMinutes : wm} min
       </span>
     );
@@ -100,7 +93,7 @@ const isArc =
     waitContent =
       c.waitMinutes != null ? (
         <span className="wfrozen wfrozen-cancelled">
-          <i className="bi bi-x-circle-fill me-1" />
+          <Icon name="x-circle-fill" className="me-1" />
           {c.waitMinutes} min
         </span>
       ) : (
@@ -169,7 +162,7 @@ const isArc =
         </span>
         {dacLabel && <span className="tag tag-dac">{dacLabel}</span>}
         {notesVisible && (
-          <i className="bi bi-journal-text notes-icon" title="Special Notes" />
+          <Icon name="journal-text" className="notes-icon" title="Special Notes" />
         )}
       </td>
       <td>
@@ -191,7 +184,7 @@ const isArc =
         )}
         {c.manual && (
           <span className="manual-badge">
-            <i className="bi bi-file-earmark-image me-1" />
+            <Icon name="file-earmark-image" className="me-1" />
             Manual
           </span>
         )}
@@ -205,7 +198,7 @@ const isArc =
             onClick={() => onPending(c)}
             style={{ color: "#b45309" }}
           >
-            <i className="bi bi-hourglass-split" /> Pending
+            <Icon name="hourglass-split" /> Pending
           </button>
           <button
             type="button"
@@ -213,9 +206,9 @@ const isArc =
             disabled={!canApprove || busy}
             onClick={() => onApprove(c)}
           >
-            <i className="bi bi-check-circle" /> Approve
+            <Icon name="check-circle" /> Approve
           </button>
-         {isArc && (
+          {isArc && (
             <button
               type="button"
               className="btn-t btn-preparing"
@@ -223,7 +216,7 @@ const isArc =
               onClick={() => onPreparing(c)}
               style={{ color: "#0284c7" }}
             >
-              <i className="bi bi-box-seam" /> Preparing
+              <Icon name="box-seam" /> Preparing
             </button>
           )}
           <button
@@ -232,7 +225,7 @@ const isArc =
             disabled={!canDispense || busy}
             onClick={() => onDispense(c)}
           >
-            <i className="bi bi-capsule-pill" /> Dispense
+            <Icon name="capsule-pill" /> Dispense
           </button>
           {c.status !== "Draft" && (
             <button
@@ -242,7 +235,7 @@ const isArc =
               onClick={() => onOpenRevert(c)}
               style={{ background: "#eff6ff", color: "#1e40af", border: "1px solid #bfdbfe" }}
             >
-              <i className="bi bi-arrow-left-circle" /> Revert
+              <Icon name="arrow-left-circle" /> Revert
             </button>
           )}
           {!dis && !can && (
@@ -253,7 +246,7 @@ const isArc =
               onClick={() => onOpenCancel(c)}
               style={{ background: "#fee2e2", color: "#991b1b", border: "1px solid #fca5a5" }}
             >
-              <i className="bi bi-x-circle" /> Cancel
+              <Icon name="x-circle" /> Cancel
             </button>
           )}
         </div>
@@ -264,7 +257,7 @@ const isArc =
           className="btn-t btn-print"
           onClick={() => printPrescription(c, { filterDiscontinued: true })}
         >
-          <i className="bi bi-printer" />
+          <Icon name="printer" />
         </button>
       </td>
     </tr>

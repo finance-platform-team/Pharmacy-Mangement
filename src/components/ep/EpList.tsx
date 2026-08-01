@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { Visit } from "../../domain/types";
 import Button from "../ui/Button";
 import Pagination from "../ui/Pagination";
+import Icon from "../ui/Icon";
 import { getLocalDateStr } from "../../utils/format";
 import "./EpList.css";
 
@@ -121,7 +122,7 @@ export default function EpList({
     <div>
       <div className="ep-daterange-bar">
         <span className="ep-daterange-label">
-          <i className="bi bi-calendar-range" /> Date Range
+          <Icon name="calendar-range" /> Date Range
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)" }}>From</label>
@@ -142,7 +143,7 @@ export default function EpList({
             onChange={(e) => handleDateChange(dateFrom, e.target.value)}
           />
           <span className="ep-daterange-label" style={{ marginLeft: 10 }}>
-            <i className="bi bi-currency-dollar" /> Price
+            <Icon name="currency-dollar" /> Price
           </span>
           <div className="ep-price-range">
             <input
@@ -178,7 +179,7 @@ export default function EpList({
       <div className="ep-toolbar">
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div className="ep-search-wrap">
-            <i className="bi bi-search" />
+            <Icon name="search" />
             <input
               type="text"
               className="ep-search-input"
@@ -216,7 +217,7 @@ export default function EpList({
                 <th>Physician</th>
                 <th className="sortable" onClick={toggleTimeSort}>
                   Order Time{" "}
-                  {sortDir && <i className={`bi bi-sort-${sortDir === "asc" ? "down" : "up-alt"}`} />}
+                  {sortDir && <Icon name={`sort-${sortDir === "asc" ? "down" : "up-alt"}`} />}
                 </th>
                 <th>Specialty</th>
                 <th className="c">Est. Price</th>
@@ -278,7 +279,7 @@ export default function EpList({
 
         {!loading && filtered.length === 0 && (
           <div className="ep-empty">
-            <i className="bi bi-inbox" />
+            <Icon name="inbox" />
             <p>No ePrescriptions found</p>
             <p>Try a different search or create a new manual prescription.</p>
           </div>
@@ -295,7 +296,7 @@ export default function EpList({
       </div>
 
       <p className="ep-hint">
-        <i className="bi bi-hand-index-thumb" /> Double-click any row to view full prescription details
+        <Icon name="hand-index-thumb" /> Double-click any row to view full prescription details
       </p>
     </div>
   );

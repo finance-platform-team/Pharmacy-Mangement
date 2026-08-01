@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
+import Icon from "./Icon";
 import "./Modal.css";
 
 type Size = "sm" | "md" | "lg" | "xl";
@@ -51,11 +52,11 @@ export default function Modal({
       >
         <div className="modal-u-header">
           <h5 className="modal-u-title">
-            {icon && <i className={`bi ${icon}`} />}
+            {icon && <Icon name={icon} />}
             {title}
           </h5>
           <button className="modal-u-close" onClick={onClose}>
-            <i className="bi bi-x-lg" />
+            <Icon name="x-lg" />
           </button>
         </div>
 

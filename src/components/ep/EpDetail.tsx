@@ -1,5 +1,6 @@
 import type { Visit } from "../../domain/types";
 import Button from "../ui/Button";
+import Icon from "../ui/Icon";
 import { queueDisplayForClaim } from "../../domain/queue";
 import OneDriveViewer from "../attachments/OneDriveViewer";
 import { usePrintPrescription } from "../../hooks/usePrintPrescription.tsx";
@@ -84,7 +85,7 @@ export default function EpDetail({ visit: rx, onBack, onOpenDraft }: EpDetailPro
       <div className="ep-detail-body">
         <div className="ep-detail-section">
           <div className="ep-detail-section-title">
-            <i className="bi bi-person-vcard" /> Patient & Visit Information
+            <Icon name="person-vcard" /> Patient & Visit Information
           </div>
           <div className="ep-detail-info-grid">
             <div className="ep-detail-info-field">
@@ -142,7 +143,7 @@ export default function EpDetail({ visit: rx, onBack, onOpenDraft }: EpDetailPro
 
         <div className="ep-detail-section">
           <div className="ep-detail-section-title">
-            <i className="bi bi-capsule-pill" /> Prescribed Medications
+            <Icon name="capsule-pill" /> Prescribed Medications
             <span style={{ marginLeft: "auto", fontWeight: 600, fontSize: 12, color: "var(--green-500)" }}>
               {rx.medications.length} item{rx.medications.length !== 1 ? "s" : ""}
             </span>
@@ -150,7 +151,7 @@ export default function EpDetail({ visit: rx, onBack, onOpenDraft }: EpDetailPro
 
           {rx.medications.length === 0 ? (
             <div className="ep-detail-meds-empty">
-              <i className="bi bi-capsule" />
+              <Icon name="capsule" />
               <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>No medications listed</p>
             </div>
           ) : (
@@ -164,7 +165,7 @@ export default function EpDetail({ visit: rx, onBack, onOpenDraft }: EpDetailPro
                   {m.patientNotes && <div><strong>Patient Notes:</strong> {m.patientNotes}</div>}
                   {m.alternative && (
                     <div style={{ color: "#991b1b", fontWeight: 600 }}>
-                      <i className="bi bi-arrow-repeat me-1" /><strong>Alternative:</strong> {m.alternative}
+                      <Icon name="arrow-repeat" className="me-1" /><strong>Alternative:</strong> {m.alternative}
                     </div>
                   )}
                   {m.adminNotes && <div><strong>Admin Notes:</strong> {m.adminNotes}</div>}
@@ -181,7 +182,7 @@ export default function EpDetail({ visit: rx, onBack, onOpenDraft }: EpDetailPro
         {(notesText || rx.specialNotes) && (
           <div className="ep-detail-section">
             <div className="ep-detail-section-title">
-              <i className="bi bi-chat-square-text" /> Notes &amp; Remarks
+              <Icon name="chat-square-text" /> Notes &amp; Remarks
             </div>
             {notesText && (
               <p style={{ marginBottom: 10 }}>

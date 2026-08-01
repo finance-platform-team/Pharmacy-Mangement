@@ -5,7 +5,7 @@ import { PrintProvider } from "./PrintProvider";
 import { BusinessUnitProvider } from "./BusinessUnitProvider";
 import BuStartupModal from "./components/shared/BuStartupModal";
 import BuSelector from "./components/shared/BuSelector";
-
+import Icon from "./components/ui/Icon";
 import "./App.css";
 import "./styles/print.css";
 
@@ -25,13 +25,13 @@ export default function App() {
                 className={`app-tab-btn ${tab === "ep" ? "active" : ""}`}
                 onClick={() => setTab("ep")}
               >
-                <i className="bi bi-file-earmark-medical" /> eprescription
+                <Icon name="file-earmark-medical" /> eprescription
               </button>
               <button
                 className={`app-tab-btn ${tab === "claims" ? "active" : ""}`}
                 onClick={() => setTab("claims")}
               >
-                <i className="bi bi-list-ul" /> Queue Claims
+                <Icon name="list-ul" /> Queue Claims
               </button>
             </div>
             <BuSelector />

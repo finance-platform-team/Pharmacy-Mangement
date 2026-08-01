@@ -1,4 +1,5 @@
 import type { FilterState } from "../../domain/filters";
+import Icon from "../ui/Icon";
 import "./FilterChips.css";
 
 const CHIP_LABELS: Record<keyof FilterState, string> = {
@@ -39,7 +40,7 @@ export default function FilterChips({
         <div className="filter-chip">
           Search: <strong>{search}</strong>
           <button className="chip-remove" onClick={() => onSearchChange("")} title="Remove">
-            <i className="bi bi-x-circle" />
+            <Icon name="x-circle" />
           </button>
         </div>
       )}
@@ -47,7 +48,7 @@ export default function FilterChips({
         <div className="filter-chip" key={key}>
           {CHIP_LABELS[key]}: <strong>{filters[key]}</strong>
           <button className="chip-remove" onClick={() => removeFilter(key)} title="Remove">
-            <i className="bi bi-x-circle" />
+            <Icon name="x-circle" />
           </button>
         </div>
       ))}
