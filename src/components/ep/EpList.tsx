@@ -178,8 +178,19 @@ export default function EpList({
 
       <div className="ep-toolbar">
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div className="ep-search-wrap">
-            <Icon name="search" />
+          <div
+            className="ep-search-wrap"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              border: "1px solid var(--gold-200, #e6dbcd)",
+              borderRadius: 8,
+              padding: "8px 12px",
+              background: "#fff",
+            }}
+          >
+            <Icon name="search" size={18} style={{ flexShrink: 0, color: "var(--text-muted)" }} />
             <input
               type="text"
               className="ep-search-input"
@@ -189,6 +200,7 @@ export default function EpList({
                 setSearch(e.target.value);
                 setPage(1);
               }}
+              style={{ border: "none", outline: "none", flex: 1, fontSize: 13, background: "transparent" }}
             />
           </div>
           <Button variant="primary" icon="bi-clock-history" onClick={onSearchVisits}>

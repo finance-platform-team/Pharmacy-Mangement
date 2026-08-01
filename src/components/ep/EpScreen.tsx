@@ -144,31 +144,11 @@ export default function EpScreen() {
         onConfirm={handleUnavailMedsConfirm}
       />
 
-      {/* NEW — OneDrive link wait modal, shown after a manual prescription is created.
-          This modal never blocks the rest of the app: the outer <Spinner withCard>
-          below is a separate, unrelated overlay for the visits list loading state —
-          it is NOT shown while odWaiting is true. The user can close this modal with
-          the button below (or the Modal's own close control) at any point, including
-          while odWaiting is still true; closing it does not cancel the background
-          waitForOneDriveLink() call, it just hides the modal. */}
+      {/* NEW — OneDrive link wait modal, shown after a manual prescription is created */}
       <Modal open={odModalOpen} onClose={() => setOdModalOpen(false)} title="OneDrive Documents">
         {odWaiting ? (
           <div style={{ padding: "24px 8px", textAlign: "center" }}>
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                margin: "0 auto 12px",
-                borderRadius: "50%",
-                border: "3px solid var(--border-color, #e5e7eb)",
-                borderTopColor: "var(--brand-green, #1f4d2c)",
-                animation: "od-spin 0.8s linear infinite",
-              }}
-            />
-            <style>{`@keyframes od-spin { to { transform: rotate(360deg); } }`}</style>
-            <p style={{ margin: 0, color: "var(--text-muted, #6b7280)" }}>
-              Checking for OneDrive folder…
-            </p>
+            <Spinner show text="Checking for OneDrive folder…" />
           </div>
         ) : odLink ? (
           <div style={{ padding: "16px 8px", textAlign: "center" }}>
@@ -186,11 +166,6 @@ export default function EpScreen() {
             <p>No OneDrive link is available yet. It may still be generating in the background — check again from the claim later.</p>
           </div>
         )}
-        <div style={{ padding: "8px", textAlign: "center", borderTop: "1px solid var(--border-color, #e5e7eb)", marginTop: 8 }}>
-          <Button variant="ghost" onClick={() => setOdModalOpen(false)}>
-            Close
-          </Button>
-        </div>
       </Modal>
 
       <Spinner show={loading} withCard text="Loading prescriptions…" />

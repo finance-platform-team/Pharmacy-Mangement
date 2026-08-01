@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import Icon from "./Icon";
 import "./Button.css";
 
 type Variant = "primary" | "gold" | "ghost" | "danger" | "success" | "warn";
@@ -36,7 +37,7 @@ export default function Button({
       {loading ? (
         <span className="spinner-border spinner-border-sm" />
       ) : (
-        icon && <i className={`bi ${icon}`} />
+        icon && <Icon name={icon} />
       )}
       {children}
     </button>
