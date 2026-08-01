@@ -8,6 +8,8 @@ interface FilterBarProps {
   filters: FilterState;
   onFiltersChange: (filters: FilterState) => void;
   onRefresh: () => void;
+  onSearchVisits: () => void;
+
 }
 
 export default function FilterBar({
@@ -16,6 +18,7 @@ export default function FilterBar({
   filters,
   onFiltersChange,
   onRefresh,
+  onSearchVisits,
 }: FilterBarProps) {
   function updateFilter(key: keyof FilterState, value: string) {
     onFiltersChange({ ...filters, [key]: value || undefined });
@@ -40,6 +43,9 @@ export default function FilterBar({
           onChange={(e) => onSearchChange(e.target.value)}
         />
       </div>
+      <Button variant="primary" icon="bi-clock-history" onClick={onSearchVisits}>
+        Search Visits
+      </Button>
 
       <Button variant="ghost" icon="bi-arrow-clockwise" onClick={onRefresh}>
         Refresh

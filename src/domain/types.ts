@@ -58,6 +58,7 @@ export interface Visit {
   manual: boolean;
   diagnosis: string;
   notes: string;
+  notesCode: number | null;
   specialNotes: string;
   waitMinutes?: number;
   cancelReason?: number;

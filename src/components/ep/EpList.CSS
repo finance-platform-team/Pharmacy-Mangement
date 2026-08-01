@@ -8,7 +8,7 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 12px; /* كانت موجودة؟ تأكد إنها 12px على الأقل */
   margin-bottom: 18px;
 }
 

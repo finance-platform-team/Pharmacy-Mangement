@@ -458,3 +458,10 @@ input.attended-cb:disabled {
   font-size: 1rem;
   font-weight: 500;
 }
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+}
+.sortable-th:hover {
+  color: var(--green-500);
+}

@@ -1,6 +1,7 @@
 import type { Visit } from "../../domain/types";
 import Button from "../ui/Button";
 import { queueDisplayForClaim } from "../../domain/queue";
+import OneDriveViewer from "../attachments/OneDriveViewer";
 import "./EpDetail.css";
 
 function fmtDateTime(iso?: string): string {
@@ -185,6 +186,10 @@ export default function EpDetail({ visit: rx, onBack, onOpenDraft }: EpDetailPro
             {rx.specialNotes && <div className="ep-detail-notes-box">{rx.specialNotes}</div>}
           </div>
         )}
+
+        <div className="ep-detail-section">
+          <OneDriveViewer visit={rx} />
+        </div>
       </div>
     </div>
   );

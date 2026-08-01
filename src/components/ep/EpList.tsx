@@ -8,14 +8,14 @@ import "./EpList.css";
 interface EpListProps {
   visits: Visit[];
   loading: boolean;
-    busyId: string | null;
-
+  busyId: string | null;
   onRefresh: () => void;
   onDateRangeChange: (from: string, to: string) => void;
   onOpenDetail: (visit: Visit) => void;
   onGoManual: () => void;
   onOpenDraft: (visit: Visit) => void;
   onOpenCancel: (visit: Visit) => void;
+  onSearchVisits: () => void;
 }
 
 type SortDir = "asc" | "desc";
@@ -42,8 +42,9 @@ export default function EpList({
   onDateRangeChange,
   onOpenDetail,
   onGoManual,
-    onOpenDraft,
+  onOpenDraft,
   onOpenCancel,
+  onSearchVisits,
 }: EpListProps) {
   const todayStr = getLocalDateStr(new Date());
 
@@ -63,8 +64,6 @@ export default function EpList({
   }
 
   function handleFromChange(newFrom: string) {
-    // If "To" is now before the new "From", clear it so we don't end up
-    // with an invalid (to < from) range.
     const newTo = dateTo && dateTo < newFrom ? "" : dateTo;
     handleDateChange(newFrom, newTo);
   }
@@ -177,19 +176,25 @@ export default function EpList({
       </div>
 
       <div className="ep-toolbar">
-        <div className="ep-search-wrap">
-          <i className="bi bi-search" />
-          <input
-            type="text"
-            className="ep-search-input"
-            placeholder="Search by patient name or phone"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="ep-search-wrap">
+            <i className="bi bi-search" />
+            <input
+              type="text"
+              className="ep-search-input"
+              placeholder="Search by patient name or phone"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <Button variant="primary" icon="bi-clock-history" onClick={onSearchVisits}>
+            Search Visits
+          </Button>
         </div>
+
         <div style={{ display: "flex", gap: 8 }}>
           <Button variant="ghost" icon="bi-arrow-clockwise" onClick={onRefresh}>
             Refresh

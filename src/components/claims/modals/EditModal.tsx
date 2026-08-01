@@ -6,6 +6,7 @@ import { updateVisitDetails, updatePatientAddress } from "../../../api/visitsApi
 import { DELIVERY_LABEL, CHRONIC_LABEL, DELIVERY_AND_CHRONIC_LABEL, NOTES_LABEL } from "../../../domain/status";
 import { buildTimeline } from "../../../domain/timeline";
 import "./EditModal.css";
+import OneDriveViewer from "../../attachments/OneDriveViewer";
 
 interface EditModalProps {
   open: boolean;
@@ -50,8 +51,7 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
   const [chronic, setChronic] = useState(visit.chronicCode != null ? String(visit.chronicCode) : "");
   const [dac, setDac] = useState(visit.deliveryAndChronic != null ? String(visit.deliveryAndChronic) : "");
   const [refillDay, setRefillDay] = useState(visit.refillDay != null ? String(visit.refillDay) : "");
-  const [notes, setNotes] = useState("");
-  const [specialNotes, setSpecialNotes] = useState(visit.specialNotes || "");
+const [notes, setNotes] = useState(visit.notesCode != null ? String(visit.notesCode) : "");  const [specialNotes, setSpecialNotes] = useState(visit.specialNotes || "");
   const [address, setAddress] = useState(visit.address || "");
   const [doctorName] = useState(visit.physician || "");
   const [manualSpecialty] = useState(visit.specialty || "");
@@ -281,7 +281,7 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
           </div>
         </div>
 
-        <div className="edit-side-col">
+    <div className="edit-side-col">
           <div className="edit-section-card">
             <div className="edit-section-title">
               <i className="bi bi-capsule-pill" /> Medications
@@ -312,6 +312,12 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
           </div>
         </div>
       </div>
+
+      <div className="edit-divider-section">
+        <span>Insurance Card</span>
+      </div>
+
+      <OneDriveViewer visit={visit} />
 
       {isDispensed && (
         <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 10 }}>

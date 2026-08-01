@@ -1,10 +1,13 @@
 import type { Visit } from "../../domain/types";
+import type { SortState } from "../../domain/filters";
 import ClaimRow from "./ClaimRow";
 import "./ClaimsTable.css";
 
 interface ClaimsTableProps {
   claims: Visit[];
   busyId: string | null;
+  sort?: SortState;
+  onSortToggle: (column: "queue" | "wait") => void;
   onAttend: (visit: Visit) => void;
   onPending: (visit: Visit) => void;
   onApprove: (visit: Visit) => void;
@@ -18,6 +21,8 @@ interface ClaimsTableProps {
 export default function ClaimsTable({
   claims,
   busyId,
+  sort,
+  onSortToggle,
   onAttend,
   onPending,
   onApprove,
@@ -38,11 +43,21 @@ export default function ClaimsTable({
           <thead>
             <tr>
               <th className="c">Attended</th>
-              <th>Queue #</th>
+              <th className="sortable-th" onClick={() => onSortToggle("queue")}>
+                Queue #{" "}
+                {sort?.column === "queue" && (
+                  <i className={`bi bi-sort-${sort.direction === "asc" ? "down" : "up-alt"}`} />
+                )}
+              </th>
               <th>Status</th>
               <th>Patient Name</th>
               <th>Phone</th>
-              <th className="c">Wait Time</th>
+              <th className="c sortable-th" onClick={() => onSortToggle("wait")}>
+                Wait Time{" "}
+                {sort?.column === "wait" && (
+                  <i className={`bi bi-sort-${sort.direction === "asc" ? "down" : "up-alt"}`} />
+                )}
+              </th>
               <th>Specialty</th>
               <th>Delivery / Chronic / Notes</th>
               <th>Worked by</th>

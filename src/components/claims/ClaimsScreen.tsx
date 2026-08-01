@@ -19,6 +19,8 @@ import type { StatusValue } from "../../domain/status";
 import type { Visit } from "../../domain/types";
 import { saveUnavailableMedications } from "../../api/medsApi";
 import { getLogicalDateStr } from "../../utils/format";
+import type { SortState } from "../../domain/filters";
+import GetPatientPrescriptionModal from "../shared/GetPatientPrescriptionModal";
 
 const PER_PAGE = 20;
 
@@ -39,6 +41,19 @@ export default function ClaimsScreen() {
   }
 
   const [availModalVisit, setAvailModalVisit] = useState<Visit | null>(null);
+  const [sort, setSort] = useState<SortState | undefined>(undefined);
+  const [pvModalOpen, setPvModalOpen] = useState(false);
+
+  function handleSortToggle(column: "queue" | "wait") {
+    setSort((prev) => {
+      if (prev?.column === column) {
+        return prev.direction === "asc"
+          ? { column, direction: "desc" }
+          : undefined; // third click clears the sort
+      }
+      return { column, direction: "asc" };
+    });
+  }
 
   function handleAvailSaved(visit: Visit) {
     setAvailModalVisit(null);
@@ -87,8 +102,8 @@ export default function ClaimsScreen() {
   const [page, setPage] = useState(1);
 
   const filteredVisits = useMemo(
-    () => applyFilters(visits, { search, filters }),
-    [visits, search, filters],
+    () => applyFilters(visits, { search, filters, sort }),
+    [visits, search, filters, sort],
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredVisits.length / PER_PAGE));
@@ -119,6 +134,8 @@ export default function ClaimsScreen() {
         filters={filters}
         onFiltersChange={handleFiltersChange}
         onRefresh={reload}
+                onSearchVisits={() => setPvModalOpen(true)}
+
       />
 
       <FilterChips
@@ -128,9 +145,15 @@ export default function ClaimsScreen() {
         onFiltersChange={handleFiltersChange}
       />
 
+<GetPatientPrescriptionModal
+        open={pvModalOpen}
+        onClose={() => setPvModalOpen(false)}
+      />
       <ClaimsTable
         claims={pageVisits}
         busyId={busyId}
+        sort={sort}
+        onSortToggle={handleSortToggle}
         onAttend={attend}
         onPending={pending}
         onApprove={approve}

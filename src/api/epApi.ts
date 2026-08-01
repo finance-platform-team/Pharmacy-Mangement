@@ -103,3 +103,41 @@ console.log(visitData);
   const result = await Crf79_visitsesService.create(visitData as never);
   return result.data?.crf79_visitsid ?? "";
 }
+export async function waitForQueueNo(visitId: string): Promise<string | null> {
+  const cleanId = visitId.replace(/[{}]/g, "");
+  for (let i = 0; i < 10; i++) {
+    try {
+      const res = await Crf79_visitsesService.get(cleanId, {
+        select: ["new_queueno"],
+      });
+      if (res.data?.new_queueno) return res.data.new_queueno;
+    } catch {
+      // ignore and retry
+    }
+    await new Promise((r) => setTimeout(r, 800));
+  }
+  return null;
+}/**
+ * Polls the visit's crf79_documents field (the OneDrive folder link) up
+ * to 10 times, 800ms apart — same pattern as waitForQueueNo(), since the
+ * folder/link is created by a separate backend process shortly after the
+ * visit itself, not instantly. Mirrors the old waitForOneDriveLink().
+ */
+/**
+ * Waits exactly 6 seconds (the time the backend flow usually takes to
+ * create the OneDrive folder and write crf79_documents), then does a
+ * single check. Simpler and more predictable than the old repeated-
+ * polling approach.
+ */
+export async function waitForOneDriveLink(visitId: string): Promise<string | null> {
+  const cleanId = visitId.replace(/[{}]/g, "");
+  await new Promise((r) => setTimeout(r, 6000));
+  try {
+    const res = await Crf79_visitsesService.get(cleanId, {
+      select: ["crf79_documents"],
+    });
+    return res.data?.crf79_documents || null;
+  } catch {
+    return null;
+  }
+}

@@ -31,8 +31,11 @@ function buildEpFilter(from?: string, to?: string): string {
   if (to) dateFilter.push(`modifiedon le ${new Date(`${to}T23:59:59`).toISOString()}`);
 
   if (dateFilter.length === 0) {
-    const today = getLocalDateStr(new Date());
-    dateFilter.push(`modifiedon ge ${new Date(`${today}T00:00:00`).toISOString()}`);
+    // Default window: today + yesterday (no explicit range chosen yet).
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = getLocalDateStr(yesterday);
+    dateFilter.push(`modifiedon ge ${new Date(`${yesterdayStr}T00:00:00`).toISOString()}`);
   }
 
   return `crf79_status eq null and (${dateFilter.join(" and ")})`;

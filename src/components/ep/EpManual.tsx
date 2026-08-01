@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Button from "../ui/Button";
 import SearchableSelect from "../ui/SearchableSelect";
-import { createManualPrescription } from "../../api/epApi";
+import { createManualPrescription, waitForQueueNo } from "../../api/epApi";
 import {
   searchOpd,
   fetchContractorsByBU,
@@ -15,13 +15,25 @@ import "./EpManual.css";
 
 interface EpManualProps {
   userId: string;
+  showToast: (text: string, type?: "ok" | "err" | "warn") => void;
   onCancel: () => void;
-  onCreated: () => void;
+  onCreated: (visitId: string) => void;
 }
 
 type Mode = "opd" | "external";
 
-export default function EpManual({ userId, onCancel, onCreated }: EpManualProps) {
+const NOTES_OPTIONS = [
+  { id: "0", label: "Chronic" },
+  { id: "1", label: "VIP" },
+  { id: "2", label: "Chronic Delivery" },
+  { id: "3", label: "Medical Priority" },
+  { id: "4", label: "Cash" },
+  { id: "5", label: "WhatsApp" },
+  { id: "6", label: "Event" },
+  { id: "7", label: "Walk-in" },
+];
+
+export default function EpManual({ userId, showToast, onCancel, onCreated }: EpManualProps) {
   const { units } = useBusinessUnit();
 
   const [mode, setMode] = useState<Mode>("external");
@@ -30,9 +42,9 @@ export default function EpManual({ userId, onCancel, onCreated }: EpManualProps)
   const [name, setName] = useState("");
   const [nameLocked, setNameLocked] = useState(false);
   const [phone, setPhone] = useState("");
-const [doctorName, setDoctorName] = useState("External");
-const [doctorLocked, setDoctorLocked] = useState(true);
-const [specialty, setSpecialty] = useState("External");
+  const [doctorName, setDoctorName] = useState("External");
+  const [doctorLocked, setDoctorLocked] = useState(true);
+  const [specialty, setSpecialty] = useState("External");
   const [company, setCompany] = useState("");
   const [companyLocked, setCompanyLocked] = useState(false);
   const [subcontractor, setSubcontractor] = useState("");
@@ -76,7 +88,6 @@ const [specialty, setSpecialty] = useState("External");
   }, [locationId, companyLocked, units]);
 
   useEffect(() => {
-
     let cancelled = false;
 
     async function load() {
@@ -140,8 +151,6 @@ const [specialty, setSpecialty] = useState("External");
         setNameLocked(false);
       }
 
-      // No matter what, doctor/company start "open for selection" once
-      // we've searched — they only lock once an actual visit is picked.
       setDoctorLocked(false);
       setCompanyLocked(false);
       setSubcontractor("Manual");
@@ -200,8 +209,10 @@ const [specialty, setSpecialty] = useState("External");
   async function handleSubmit() {
     if (!validate()) return;
     setSaving(true);
+
+    let newVisitId: string;
     try {
-      await createManualPrescription(
+      newVisitId = await createManualPrescription(
         {
           patientName: name.trim(),
           phone: phone.trim(),
@@ -216,17 +227,28 @@ const [specialty, setSpecialty] = useState("External");
         },
         userId,
       );
-      onCreated();
-    } catch {
+    } catch (err) {
+      console.error("Manual prescription create failed:", err);
       setErrors({ submit: true });
-    } finally {
       setSaving(false);
+      return;
     }
+
+    setSaving(false);
+    showToast("Draft created — fetching queue number…", "ok");
+    onCreated(newVisitId);
+
+    waitForQueueNo(newVisitId)
+      .then((qNum) => {
+        if (qNum) {
+          showToast(`Queue #${qNum} assigned to ${name.trim() || "patient"}`, "ok");
+        }
+      })
+      .catch((err) => {
+        console.warn("Queue number polling failed (non-fatal):", err);
+      });
   }
 
-  // In OPD mode, everything below the phone search stays locked/disabled
-  // until a search has actually been run — an intentional UX addition
-  // beyond the old file, per the user's request.
   const opdFieldsReady = mode === "external" || searchedOpd;
 
   return (
@@ -448,49 +470,27 @@ const [specialty, setSpecialty] = useState("External");
           <div className="manual-field-grid full">
             <div className="manual-field">
               <label>Subcontractor</label>
-              <input readOnly
+              <input
+                readOnly
                 type="text"
                 placeholder={opdFieldsReady ? "" : "Search a phone number first"}
-                disabled={!opdFieldsReady}
                 value={subcontractor}
-                onChange={(e) => setSubcontractor(e.target.value)}
               />
             </div>
           </div>
         )}
 
-      <div className="manual-field-grid full">
-  <div className="manual-field">
-    <label>Notes</label>
-
-    <SearchableSelect
-      options={[
-        { id: "0", label: "Chronic" },
-        { id: "1", label: "VIP" },
-        { id: "2", label: "Chronic Delivery" },
-        { id: "3", label: "Medical Priority" },
-        { id: "4", label: "Cash" },
-        { id: "5", label: "WhatsApp" },
-        { id: "6", label: "Event" },
-        { id: "7", label: "Walk-in" },
-      ]}
-      value={
-        [
-          { id: "0", label: "Chronic" },
-          { id: "1", label: "VIP" },
-          { id: "2", label: "Chronic Delivery" },
-          { id: "3", label: "Medical Priority" },
-          { id: "4", label: "Cash" },
-          { id: "5", label: "WhatsApp" },
-          { id: "6", label: "Event" },
-          { id: "7", label: "Walk-in" },
-        ].find((x) => x.id === notes)?.label || ""
-      }
-      placeholder="Search notes..."
-      onChange={(id) => setNotes(id)}
-    />
-  </div>
-</div>
+        <div className="manual-field-grid full">
+          <div className="manual-field">
+            <label>Notes</label>
+            <SearchableSelect
+              options={NOTES_OPTIONS}
+              value={NOTES_OPTIONS.find((x) => x.id === notes)?.label || ""}
+              placeholder="Search notes…"
+              onChange={(id) => setNotes(id)}
+            />
+          </div>
+        </div>
 
         <div className="manual-field-grid full">
           <div className="manual-field">

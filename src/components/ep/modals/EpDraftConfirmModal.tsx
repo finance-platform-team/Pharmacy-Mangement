@@ -1,5 +1,6 @@
 import Modal from "../../ui/Modal";
 import Button from "../../ui/Button";
+import OneDriveViewer from "../../attachments/OneDriveViewer";
 import type { Visit } from "../../../domain/types";
 
 interface EpDraftConfirmModalProps {
@@ -34,10 +35,22 @@ export default function EpDraftConfirmModal({
         </>
       }
     >
-      <p style={{ fontSize: "0.85rem" }}>
-        Move <strong>{visit.patientName}</strong>'s prescription (
-        {visit.visitId}) to the Claims queue as a Draft?
-      </p>
+      <div className="pv-details-grid" style={{ marginTop: 0, marginBottom: 16 }}>
+        <div className="pv-detail-box">
+          <label>Patient</label>
+          <span>{visit.patientName}</span>
+        </div>
+        <div className="pv-detail-box">
+          <label>Phone</label>
+          <span>{visit.patientPhone}</span>
+        </div>
+        <div className="pv-detail-box">
+          <label>Visit</label>
+          <span>{visit.visitId}</span>
+        </div>
+      </div>
+
+      <OneDriveViewer visit={visit} />
     </Modal>
   );
 }
