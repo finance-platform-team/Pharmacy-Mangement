@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Visit } from "../../domain/types";
 import { calcWait, formatWaitLive, rowCssClass, queueDisplayForClaim } from "../../domain/queue";
 import { DELIVERY_AND_CHRONIC_LABEL } from "../../domain/status";
+import { usePrintPrescription } from "../../hooks/usePrintPrescription.tsx";
 
 function cleanNotes(s: string): string {
   if (!s) return "";
@@ -44,6 +45,7 @@ export default function ClaimRow({
   // (formatWaitLive) actually ticks, instead of freezing at whatever
   // value it had on the last render.
   const [, forceTick] = useState(0);
+  const { printPrescription } = usePrintPrescription();
 
   useEffect(() => {
     const isLive =
@@ -245,7 +247,11 @@ export default function ClaimRow({
         </div>
       </td>
       <td className="c">
-        <button type="button" className="btn-t btn-print" disabled title="Coming in Phase 10">
+        <button
+          type="button"
+          className="btn-t btn-print"
+          onClick={() => printPrescription(c, { filterDiscontinued: true })}
+        >
           <i className="bi bi-printer" />
         </button>
       </td>

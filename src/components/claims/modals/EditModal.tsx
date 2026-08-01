@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Modal from "../../ui/Modal";
 import Button from "../../ui/Button";
 import type { Visit } from "../../../domain/types";
 import { updateVisitDetails, updatePatientAddress } from "../../../api/visitsApi";
+import { fetchMedicationsForVisit } from "../../../api/medsApi";
 import { DELIVERY_LABEL, CHRONIC_LABEL, DELIVERY_AND_CHRONIC_LABEL, NOTES_LABEL } from "../../../domain/status";
 import { buildTimeline } from "../../../domain/timeline";
 import "./EditModal.css";
 import OneDriveViewer from "../../attachments/OneDriveViewer";
+import PrintQueueModal from "./PrintQueueModal";
 
 interface EditModalProps {
   open: boolean;
@@ -51,11 +53,41 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
   const [chronic, setChronic] = useState(visit.chronicCode != null ? String(visit.chronicCode) : "");
   const [dac, setDac] = useState(visit.deliveryAndChronic != null ? String(visit.deliveryAndChronic) : "");
   const [refillDay, setRefillDay] = useState(visit.refillDay != null ? String(visit.refillDay) : "");
-const [notes, setNotes] = useState(visit.notesCode != null ? String(visit.notesCode) : "");  const [specialNotes, setSpecialNotes] = useState(visit.specialNotes || "");
+  const [notes, setNotes] = useState(visit.notesCode != null ? String(visit.notesCode) : "");
+  const [specialNotes, setSpecialNotes] = useState(visit.specialNotes || "");
   const [address, setAddress] = useState(visit.address || "");
   const [doctorName] = useState(visit.physician || "");
   const [manualSpecialty] = useState(visit.specialty || "");
   const [saving, setSaving] = useState(false);
+  const [showPrintQueue, setShowPrintQueue] = useState(false);
+
+  // The Claims list (useVisits.ts) doesn't load medications up front —
+  // fetch them here on demand if they're missing, same pattern used by
+  // AvailModal / UnavailMedsModal / print. The initial useState below
+  // already covers the "already have them" case (this component remounts
+  // fresh per visit via key={visit.id} in EditModal), so the effect only
+  // ever needs to run the async fetch — never a synchronous setState.
+  const [medications, setMedications] = useState(visit.medications);
+  const [medsLoading, setMedsLoading] = useState(visit.medications.length === 0);
+
+  useEffect(() => {
+    if (visit.medications.length > 0) return;
+
+    let cancelled = false;
+    fetchMedicationsForVisit(visit.id)
+      .then((meds) => {
+        if (!cancelled) setMedications(meds);
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch medications for EditModal:", err);
+      })
+      .finally(() => {
+        if (!cancelled) setMedsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [visit.id]);
 
   const isCancelled = visit.status === "Cancelled";
   const isDispensed = visit.status === "Dispensed";
@@ -286,13 +318,18 @@ const [notes, setNotes] = useState(visit.notesCode != null ? String(visit.notesC
             <div className="edit-section-title">
               <i className="bi bi-capsule-pill" /> Medications
             </div>
-            {visit.medications.length === 0 ? (
+            {medsLoading ? (
+              <div className="edit-section-empty">
+                <i className="bi bi-hourglass-split" />
+                Loading medications…
+              </div>
+            ) : medications.length === 0 ? (
               <div className="edit-section-empty">
                 <i className="bi bi-info-circle" />
                 {isExternalManual ? "External Claim (No DotCare Sync Available)" : "No medications listed."}
               </div>
             ) : (
-              visit.medications.map((m) => (
+              medications.map((m) => (
                 <div className="med-item" key={m.id}>
                   <strong>{m.name}</strong>
                   {m.dose && <span> (Dosage Form: {m.dose})</span>}
@@ -336,7 +373,7 @@ const [notes, setNotes] = useState(visit.notesCode != null ? String(visit.notesC
           Close
         </Button>
         {!isCancelled && !isDispensed && (
-          <Button variant="gold" icon="bi-printer" disabled title="Coming in Phase 10">
+          <Button variant="gold" icon="bi-printer" onClick={() => setShowPrintQueue(true)}>
             Print Queue No.
           </Button>
         )}
@@ -346,6 +383,12 @@ const [notes, setNotes] = useState(visit.notesCode != null ? String(visit.notesC
           </Button>
         )}
       </div>
+
+      <PrintQueueModal
+        open={showPrintQueue}
+        visit={visit}
+        onClose={() => setShowPrintQueue(false)}
+      />
     </>
   );
 }

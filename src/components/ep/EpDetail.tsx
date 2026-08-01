@@ -2,6 +2,7 @@ import type { Visit } from "../../domain/types";
 import Button from "../ui/Button";
 import { queueDisplayForClaim } from "../../domain/queue";
 import OneDriveViewer from "../attachments/OneDriveViewer";
+import { usePrintPrescription } from "../../hooks/usePrintPrescription.tsx";
 import "./EpDetail.css";
 
 function fmtDateTime(iso?: string): string {
@@ -24,6 +25,7 @@ interface EpDetailProps {
 
 export default function EpDetail({ visit: rx, onBack, onOpenDraft }: EpDetailProps) {
   const notesText = rx.notes || undefined;
+  const { printPrescription } = usePrintPrescription();
 
   return (
     <div>
@@ -38,7 +40,11 @@ export default function EpDetail({ visit: rx, onBack, onOpenDraft }: EpDetailPro
           <Button variant="gold" icon="bi-check2-circle" onClick={() => onOpenDraft(rx)}>
             Take As Draft
           </Button>
-          <Button variant="primary" icon="bi-printer-fill" disabled title="Coming in Phase 10">
+          <Button
+            variant="primary"
+            icon="bi-printer-fill"
+            onClick={() => printPrescription(rx, { docType: "Electronic Prescription" })}
+          >
             Print Prescription
           </Button>
         </div>

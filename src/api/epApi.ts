@@ -131,7 +131,7 @@ export async function waitForQueueNo(visitId: string): Promise<string | null> {
  */
 export async function waitForOneDriveLink(visitId: string): Promise<string | null> {
   const cleanId = visitId.replace(/[{}]/g, "");
-  await new Promise((r) => setTimeout(r, 6000));
+  await new Promise((r) => setTimeout(r, 8000));
   try {
     const res = await Crf79_visitsesService.get(cleanId, {
       select: ["crf79_documents"],
