@@ -1,6 +1,6 @@
 import Modal from "../../ui/Modal";
 import Button from "../../ui/Button";
-import OneDriveViewer from "../../attachments/OneDriveViewer";
+import AttachmentsPanel from "../../attachments/AttachmentsPanel";
 import type { Visit } from "../../../domain/types";
 
 interface ApproveModalProps {
@@ -49,7 +49,7 @@ export default function ApproveModal({ open, visit, onClose, onConfirm, busy }: 
         </div>
       </div>
 
-      <OneDriveViewer visit={visit} />
+      <AttachmentsPanel visit={visit} />
 
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 18 }}>
         <Button variant="ghost" onClick={onClose} disabled={busy}>

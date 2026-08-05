@@ -1,6 +1,6 @@
 import Modal from "../../ui/Modal";
 import Button from "../../ui/Button";
-import OneDriveViewer from "../../attachments/OneDriveViewer";
+import AttachmentsPanel from "../../attachments/AttachmentsPanel";
 import type { Visit } from "../../../domain/types";
 
 interface EpDraftConfirmModalProps {
@@ -50,7 +50,7 @@ export default function EpDraftConfirmModal({
         </div>
       </div>
 
-      <OneDriveViewer visit={visit} />
+      <AttachmentsPanel visit={visit} />
     </Modal>
   );
 }

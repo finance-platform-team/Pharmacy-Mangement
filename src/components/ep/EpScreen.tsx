@@ -11,14 +11,13 @@ import CancelRowModal from "../claims/modals/CancelRowModal";
 import UnavailMedsModal from "../claims/modals/UnavailMedsModal";
 import Spinner from "../ui/Spinner";
 import ToastStack from "../ui/ToastStack";
-import Modal from "../ui/Modal"; // NEW
-import Button from "../ui/Button"; // NEW
+import Modal from "../ui/Modal";
+import Button from "../ui/Button";
 import { saveUnavailableMedications } from "../../api/medsApi";
-import { waitForOneDriveLink } from "../../api/epApi"; // NEW
 import type { Visit } from "../../domain/types";
+import type { SpAttachmentVisit } from "../../domain/Spattachments";
 import GetPatientPrescriptionModal from "../shared/GetPatientPrescriptionModal";
-
-import "../attachments/OneDriveViewer.css";
+import AttachmentsPanel from "../attachments/AttachmentsPanel";
 
 export default function EpScreen() {
   const { visits, loading, reload, setDateRange } = useEpVisits();
@@ -34,10 +33,9 @@ export default function EpScreen() {
 
   const [pvModalOpen, setPvModalOpen] = useState(false);
 
-  // NEW — OneDrive wait modal state (after manual prescription creation)
-  const [odModalOpen, setOdModalOpen] = useState(false);
-  const [odWaiting, setOdWaiting] = useState(false);
-  const [odLink, setOdLink] = useState<string | null>(null);
+  // Attachments modal, shown right after a manual prescription is created —
+  // opens immediately, no waiting/polling for any link to "generate".
+  const [attachModalVisit, setAttachModalVisit] = useState<SpAttachmentVisit | null>(null);
 
   function handleDraftConfirm(visit: Visit) {
     draft(visit);
@@ -66,26 +64,12 @@ export default function EpScreen() {
     });
   }
 
-  // NEW — called by EpManual right after a successful create, with the new visit id
-  function handleManualCreated(visitId: string) {
+  // Called by EpManual right after a successful create, with the patient/BU
+  // data needed to open the attachments panel right away (no ID-only wait).
+  function handleManualCreated(visit: { id: string; patientName: string; patientPhone: string; buText: string }) {
     setShowManual(false);
     reload();
-
-    setOdLink(null);
-    setOdWaiting(true);
-    setOdModalOpen(true);
-
-    waitForOneDriveLink(visitId)
-      .then((link) => {
-        setOdLink(link);
-      })
-      .catch((err) => {
-        console.warn("waitForOneDriveLink failed:", err);
-        setOdLink(null);
-      })
-      .finally(() => {
-        setOdWaiting(false);
-      });
+    setAttachModalVisit(visit);
   }
 
   return (
@@ -95,7 +79,7 @@ export default function EpScreen() {
           userId={systemUserId}
           showToast={showToast}
           onCancel={() => setShowManual(false)}
-          onCreated={handleManualCreated} // NEW — was: () => setShowManual(false)
+          onCreated={handleManualCreated}
         />
       ) : detailVisit ? (
         <EpDetail
@@ -144,27 +128,25 @@ export default function EpScreen() {
         onConfirm={handleUnavailMedsConfirm}
       />
 
-      {/* NEW — OneDrive link wait modal, shown after a manual prescription is created */}
-      <Modal open={odModalOpen} onClose={() => setOdModalOpen(false)} title="OneDrive Documents">
-        {odWaiting ? (
-          <div style={{ padding: "24px 8px", textAlign: "center" }}>
-            <Spinner show text="Checking for OneDrive folder…" />
-          </div>
-        ) : odLink ? (
-          <div style={{ padding: "16px 8px", textAlign: "center" }}>
-            <p>The OneDrive folder is ready.</p>
-            <Button
-              variant="gold"
-              icon="bi-box-arrow-up-right"
-              onClick={() => window.open(odLink, "_blank")}
-            >
-              Open in OneDrive
-            </Button>
-          </div>
-        ) : (
-          <div style={{ padding: "16px 8px", textAlign: "center" }}>
-            <p>No OneDrive link is available yet. It may still be generating in the background — check again from the claim later.</p>
-          </div>
+      {/* Attachments modal — opens immediately after a manual prescription is
+          created, no spinner/polling for any generated link. */}
+      <Modal open={!!attachModalVisit} onClose={() => setAttachModalVisit(null)} title="Attachments">
+        {attachModalVisit && (
+          <>
+            <AttachmentsPanel visit={attachModalVisit} defaultOpen showToast={showToast} />
+            <div className="attach-modal-footer">
+              <Button
+                variant="primary"
+                icon="bi-check-lg"
+                onClick={() => {
+                  setAttachModalVisit(null);
+                  showToast("All set ✓", "ok");
+                }}
+              >
+                Done
+              </Button>
+            </div>
+          </>
         )}
       </Modal>
 

@@ -8,7 +8,7 @@ import { fetchMedicationsForVisit } from "../../../api/medsApi";
 import { DELIVERY_LABEL, CHRONIC_LABEL, DELIVERY_AND_CHRONIC_LABEL, NOTES_LABEL } from "../../../domain/status";
 import { buildTimeline } from "../../../domain/timeline";
 import "./EditModal.css";
-import OneDriveViewer from "../../attachments/OneDriveViewer";
+import AttachmentsPanel from "../../attachments/AttachmentsPanel";
 import PrintQueueModal from "./PrintQueueModal";
 
 interface EditModalProps {
@@ -339,7 +339,7 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
         <span>Insurance Card</span>
       </div>
 
-      <OneDriveViewer visit={visit} />
+      <AttachmentsPanel visit={visit} />
 
       {isDispensed && (
         <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 10 }}>

@@ -2,7 +2,7 @@ import type { Visit } from "../../domain/types";
 import Button from "../ui/Button";
 import Icon from "../ui/Icon";
 import { queueDisplayForClaim } from "../../domain/queue";
-import OneDriveViewer from "../attachments/OneDriveViewer";
+import AttachmentsPanel from "../attachments/AttachmentsPanel";
 import { usePrintPrescription } from "../../hooks/usePrintPrescription.tsx";
 import "./EpDetail.css";
 
@@ -195,7 +195,7 @@ export default function EpDetail({ visit: rx, onBack, onOpenDraft }: EpDetailPro
         )}
 
         <div className="ep-detail-section">
-          <OneDriveViewer visit={rx} />
+          <AttachmentsPanel visit={rx} />
         </div>
       </div>
     </div>

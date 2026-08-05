@@ -18,7 +18,7 @@ interface EpManualProps {
   userId: string;
   showToast: (text: string, type?: "ok" | "err" | "warn") => void;
   onCancel: () => void;
-  onCreated: (visitId: string) => void;
+  onCreated: (visit: { id: string; patientName: string; patientPhone: string; buText: string }) => void;
 }
 
 type Mode = "opd" | "external";
@@ -237,7 +237,14 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
 
     setSaving(false);
     showToast("Draft created — fetching queue number…", "ok");
-    onCreated(newVisitId);
+
+    const selectedUnit = units.find((u) => u.id === locationId);
+    onCreated({
+      id: newVisitId,
+      patientName: name.trim(),
+      patientPhone: phone.trim(),
+      buText: selectedUnit?.name || "AAC",
+    });
 
     waitForQueueNo(newVisitId)
       .then((qNum) => {
