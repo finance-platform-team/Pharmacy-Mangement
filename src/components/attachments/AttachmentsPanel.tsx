@@ -210,7 +210,7 @@ export default function AttachmentsPanel({ visit, defaultOpen = false, showToast
               <Button variant="ghost" onClick={() => setConfirmDeleteFile(null)}>
                 Cancel
               </Button>
-              <Button variant="danger" onClick={() => performDelete(confirmDeleteFile)}>
+              <Button variant="danger" icon="bi-trash" onClick={() => performDelete(confirmDeleteFile)}>
                 Delete
               </Button>
             </div>
