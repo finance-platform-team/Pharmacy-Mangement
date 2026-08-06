@@ -32,6 +32,12 @@ export interface SpAttachmentVisit {
 
 type SpAction = "upload" | "list" | "delete";
 
+/** Falls back to the branch picked in the startup modal (same key useBusinessUnit persists to). */
+function storedBuName(): string {
+  if (typeof localStorage === "undefined") return "AAC";
+  return localStorage.getItem("pharmacy_bu_name") || "AAC";
+}
+
 /** Payload passed to spFileAction for a delete call (mirrors the HTML's `{name, realPath}` shape) */
 interface SpDeleteTarget {
   name: string;
@@ -53,7 +59,7 @@ export function spFolderName(v: SpAttachmentVisit): string {
 
 /** Build the "Open Folder" link directly (no waiting on a flow-generated link) */
 export function predictOneDriveLink(v: SpAttachmentVisit): string {
-  const bu = String(v.buText || "AAC").trim().toUpperCase();
+  const bu = String(v.buText || storedBuName()).trim().toUpperCase();
   const folderName = spFolderName(v);
   const base =
     "https://andalusiagroupegypt.sharepoint.com/sites/DigitalTransformation/PharmacyDispensingApp/Forms/AllItems.aspx?id=";
@@ -93,7 +99,7 @@ export async function spFileAction(
     folderName,
     VisitId: guidId,
     VisitRef: String(refNum),
-    BUtext: String(visit.buText || "AAC").trim().toUpperCase(),
+    BUtext: String(visit.buText || storedBuName()).trim().toUpperCase(),
     fileName,
     fileContentBase64: "",
     filePath: isFile ? `${folderName}/${fileName}` : folderName,

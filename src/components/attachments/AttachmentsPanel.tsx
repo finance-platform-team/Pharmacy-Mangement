@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Visit } from "../../domain/types";
-import type { SpAttachmentVisit, SpFile } from "../../domain/Spattachments";
+import type { SpAttachmentVisit, SpFile } from "../../domain/ٍSpAttachments";
 import {
   predictOneDriveLink,
   spDeleteFile,
   spListFiles,
   spPrintFile,
   spUploadFile,
-} from "../../domain/Spattachments";
+} from "../../domain/ٍSpAttachments";
 import Icon from "../ui/Icon";
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";

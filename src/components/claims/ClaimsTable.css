@@ -355,6 +355,9 @@ input.attended-cb:disabled {
 }
 
 .btn-t {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border: none;
   border-radius: var(--radius-sm);
   padding: 4px 8px;

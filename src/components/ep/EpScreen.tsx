@@ -15,7 +15,7 @@ import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import { saveUnavailableMedications } from "../../api/medsApi";
 import type { Visit } from "../../domain/types";
-import type { SpAttachmentVisit } from "../../domain/Spattachments";
+import type { SpAttachmentVisit } from "../../domain/ٍSpAttachments";
 import GetPatientPrescriptionModal from "../shared/GetPatientPrescriptionModal";
 import AttachmentsPanel from "../attachments/AttachmentsPanel";
 
