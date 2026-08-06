@@ -42,28 +42,8 @@ export default function FilterBar({
     onFiltersChange({});
   }
 
-  return (
-    <div className="search-and-filter-row">
-      <div className="search-wrap">
-        <Icon name="search" />
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Search by patient name or phone…"
-          maxLength={40}
-          autoComplete="off"
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
-      </div>
-      <Button variant="primary" icon="bi-clock-history" onClick={onSearchVisits}>
-        Search Visits
-      </Button>
-
-      <Button variant="ghost" icon="bi-arrow-clockwise" onClick={onRefresh}>
-        Refresh
-      </Button>
-
+return (
+    <div className="filter-bar-wrap">
       <div className="filter-section-card">
         <div className="filter-section-row">
           <span className="filter-section-label">
@@ -117,6 +97,28 @@ export default function FilterBar({
             Clear
           </Button>
         </div>
+      </div>
+
+      <div className="search-and-filter-row">
+        <div className="search-wrap">
+          <Icon name="search" />
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search by patient name or phone…"
+            maxLength={40}
+            autoComplete="off"
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+        </div>
+        <Button variant="primary" icon="bi-clock-history" onClick={onSearchVisits}>
+          Search Visits
+        </Button>
+
+        <Button variant="ghost" icon="bi-arrow-clockwise" onClick={onRefresh}>
+          Refresh
+        </Button>
       </div>
     </div>
   );
