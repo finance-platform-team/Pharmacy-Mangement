@@ -177,7 +177,7 @@ export default function EpList({
       </div>
 
       <div className="ep-toolbar">
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <div
             className="ep-search-wrap"
             style={{
@@ -188,6 +188,7 @@ export default function EpList({
               borderRadius: 8,
               padding: "8px 12px",
               background: "#fff",
+              flex: "1 1 220px",
             }}
           >
             <Icon name="search" size={18} style={{ flexShrink: 0, color: "var(--text-muted)" }} />
@@ -208,7 +209,7 @@ export default function EpList({
           </Button>
         </div>
 
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Button variant="ghost" icon="bi-arrow-clockwise" onClick={onRefresh}>
             Refresh
           </Button>
@@ -257,6 +258,18 @@ export default function EpList({
                   <td className="c">
                     <div style={{ display: "flex", gap: 7, justifyContent: "center", alignItems: "center" }}>
                       {rx.manual && <span className="ep-source-badge">Manual</span>}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon="bi-eye"
+                        className="ep-row-view-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenDetail(rx);
+                        }}
+                      >
+                        View
+                      </Button>
                       <Button
                         variant="primary"
                         size="sm"

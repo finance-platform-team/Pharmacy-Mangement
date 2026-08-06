@@ -110,8 +110,15 @@
 }
 
 .attach-dropzone.uploading {
-  opacity: 0.6;
   pointer-events: none;
+  border-color: var(--gold-500);
+}
+
+.attach-dropzone-spinner {
+  color: var(--gold-500);
+  width: 22px;
+  height: 22px;
+  border-width: 2.5px;
 }
 
 /* ── File list ────────────────────────────────────────────────────── */
@@ -167,4 +174,29 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .attach-row {
+    flex-wrap: wrap;
+  }
+
+  .attach-name {
+    flex-basis: 100%;
+    white-space: normal;
+  }
+
+  .attach-actions {
+    flex-basis: 100%;
+    justify-content: flex-end;
+  }
+
+  .od-toolbar {
+    justify-content: stretch;
+  }
+
+  .od-toolbar > * {
+    flex: 1;
+    justify-content: center;
+  }
 }

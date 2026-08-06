@@ -26,3 +26,14 @@
   padding: 16px 0;
   color: #666;
 }
+
+@media (max-width: 480px) {
+  .bu-startup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bu-startup-btn {
+    padding: 16px 12px;
+    font-size: 1rem;
+  }
+}

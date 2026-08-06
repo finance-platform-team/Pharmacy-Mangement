@@ -347,13 +347,7 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
         </p>
       )}
 
-      <div style={{
-        display: "flex", justifyContent: "flex-end", gap: 10,
-        marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--green-200)",
-        position: "sticky", bottom: -20, background: "var(--green-100)",
-        marginLeft: -22, marginRight: -22, marginBottom: -20,
-        paddingLeft: 22, paddingRight: 22, paddingBottom: 20,
-      }}>
+      <div className="edit-sticky-footer">
         <Button variant="ghost" onClick={onClose}>
           Close
         </Button>

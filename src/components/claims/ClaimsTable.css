@@ -33,6 +33,7 @@
 
 .table-scroll {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 table.qt {
@@ -467,4 +468,43 @@ input.attended-cb:disabled {
 }
 .sortable-th:hover {
   color: var(--green-500);
+}
+
+button.btn-edit-mobile {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .queue-title-bar {
+    flex-wrap: wrap;
+    padding: 12px 14px;
+    font-size: 0.9rem;
+  }
+
+  table.qt th,
+  table.qt td {
+    padding: 6px 4px;
+  }
+
+  .actions-cell {
+    gap: 3px;
+  }
+
+  .btn-t {
+    padding: 4px 6px;
+    font-size: 0.63rem;
+  }
+}
+
+/* Double-click/double-tap to open a row is unreliable on touchscreens.
+   Gate on touch capability (no hover, coarse pointer) rather than viewport
+   width alone — some embedding hosts (e.g. Power Apps) render at a narrow
+   logical width and scale visually, which makes width-only media queries
+   fire on real desktops too. */
+@media (hover: none) and (pointer: coarse) {
+  button.btn-edit-mobile {
+    display: inline-flex !important;
+    background: var(--green-200);
+    color: var(--green-600);
+  }
 }

@@ -46,3 +46,16 @@
     opacity: 1;
   }
 }
+
+@media (max-width: 640px) {
+  .toast-wrap {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .toast-item {
+    min-width: 0;
+    width: 100%;
+  }
+}

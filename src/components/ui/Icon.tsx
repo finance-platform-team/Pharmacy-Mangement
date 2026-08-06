@@ -9,7 +9,7 @@ import {
   CalendarRange, CurrencyDollar, PlusLg, HandIndexThumb,
   FileEarmarkMedicalFill, Toggle2Off, ExclamationCircleFill, Send,
   Check2Circle, CheckLg, GeoAlt, Clock, Floppy, PrinterFill, ArrowLeft,
-  SortDown, SortUpAlt,
+  SortDown, SortUpAlt, Trash, TrashFill, Eye,
 } from "react-bootstrap-icons";
 
 // Maps bootstrap-icons dash-case names (e.g. "check-circle-fill") to the
@@ -69,6 +69,9 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: 
   "floppy": Floppy,
   "sort-down": SortDown,
   "sort-up-alt": SortUpAlt,
+  "trash": Trash,
+  "trash-fill": TrashFill,
+  "eye": Eye,
 };
 
 interface IconProps {

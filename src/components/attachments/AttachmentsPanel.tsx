@@ -29,6 +29,30 @@ interface AttachmentsPanelProps {
   showToast?: (text: string, type?: "ok" | "err" | "warn") => void;
 }
 
+const ALLOWED_ATTACHMENT_MIME_PREFIXES = ["image/"];
+const ALLOWED_ATTACHMENT_MIME_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+];
+const ALLOWED_ATTACHMENT_EXTENSIONS = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"];
+
+const ATTACHMENT_ACCEPT =
+  "image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx," +
+  ALLOWED_ATTACHMENT_MIME_TYPES.join(",");
+
+/** Only PDFs, Word/Excel documents, and images may be uploaded as attachments. */
+function isAllowedAttachment(file: File): boolean {
+  if (ALLOWED_ATTACHMENT_MIME_PREFIXES.some((p) => file.type.startsWith(p))) return true;
+  if (ALLOWED_ATTACHMENT_MIME_TYPES.includes(file.type)) return true;
+  const name = file.name.toLowerCase();
+  return ALLOWED_ATTACHMENT_EXTENSIONS.some((ext) => name.endsWith(ext));
+}
+
 /** Maps the domain Visit (or an already-minimal object) into the shape the SharePoint flow needs. */
 function toSpAttachmentVisit(v: Visit | SpAttachmentVisit): SpAttachmentVisit {
   return {
@@ -54,6 +78,7 @@ export default function AttachmentsPanel({ visit, defaultOpen = false, showToast
   const [files, setFiles] = useState<SpFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [dragOver, setDragOver] = useState(false);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
   const [confirmDeleteFile, setConfirmDeleteFile] = useState<SpFile | null>(null);
@@ -80,17 +105,42 @@ export default function AttachmentsPanel({ visit, defaultOpen = false, showToast
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, visit.id]);
 
-  const handleUpload = async (file: File | null | undefined) => {
-    if (!file) return;
+  const handleUpload = async (fileList: FileList | File[] | null | undefined) => {
+    const files = fileList ? Array.from(fileList) : [];
+    if (files.length === 0) return;
+
+    const allowed = files.filter(isAllowedAttachment);
+    const rejected = files.length - allowed.length;
+    if (rejected > 0) {
+      showToast(
+        rejected === files.length
+          ? "File type not allowed — only PDF, Word, Excel, PowerPoint, or image files are accepted"
+          : `${rejected} file(s) skipped — only PDF, Word, Excel, PowerPoint, or image files are accepted`,
+        "err",
+      );
+    }
+    if (allowed.length === 0) return;
+
     setUploading(true);
+    setUploadProgress({ current: 0, total: allowed.length });
+    let uploaded = 0;
     try {
-      await spUploadFile(spVisit, file);
-      showToast(`"${file.name}" uploaded`, "ok");
-      await load();
-    } catch (e) {
-      showToast((e as Error).message || "Upload failed", "err");
+      for (const [i, file] of allowed.entries()) {
+        try {
+          await spUploadFile(spVisit, file);
+          uploaded++;
+        } catch (e) {
+          showToast(`"${file.name}": ${(e as Error).message || "Upload failed"}`, "err");
+        }
+        setUploadProgress({ current: i + 1, total: allowed.length });
+      }
+      if (uploaded > 0) {
+        showToast(uploaded === 1 ? `"${allowed[0].name}" uploaded` : `${uploaded} files uploaded`, "ok");
+        await load();
+      }
     } finally {
       setUploading(false);
+      setUploadProgress({ current: 0, total: 0 });
     }
   };
 
@@ -151,20 +201,32 @@ export default function AttachmentsPanel({ visit, defaultOpen = false, showToast
             onDrop={(e) => {
               e.preventDefault();
               setDragOver(false);
-              handleUpload(e.dataTransfer.files?.[0]);
+              handleUpload(e.dataTransfer.files);
             }}
           >
             <input
               ref={fileInputRef}
               type="file"
+              accept={ATTACHMENT_ACCEPT}
+              multiple
               hidden
               onChange={(e) => {
-                handleUpload(e.target.files?.[0]);
+                handleUpload(e.target.files);
                 e.target.value = "";
               }}
             />
-            <Icon name="cloud-arrow-up-fill" className="attach-dropzone-icon" />
-            <span>{uploading ? "Uploading…" : "Click or drag a file here to upload"}</span>
+            {uploading ? (
+              <span className="spinner-border spinner-border-sm attach-dropzone-spinner" />
+            ) : (
+              <Icon name="cloud-arrow-up-fill" className="attach-dropzone-icon" />
+            )}
+            <span>
+              {uploading
+                ? uploadProgress.total > 1
+                  ? `Uploading ${uploadProgress.current} of ${uploadProgress.total}…`
+                  : "Uploading…"
+                : "Click or drag files here to upload"}
+            </span>
           </div>
 
           <div className="attach-list">

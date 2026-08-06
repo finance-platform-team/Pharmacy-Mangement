@@ -38,3 +38,8 @@
   --font-body: "DM Sans", sans-serif;
   --t: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Breakpoint convention used across the app's @media queries:
+   <=640px  phones
+   <=768px  small tablets / phones landscape
+   <=1024px tablets / small laptops */

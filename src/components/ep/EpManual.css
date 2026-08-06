@@ -288,3 +288,38 @@
 .od-open-btn:hover {
   background: var(--green-600);
 }
+
+@media (max-width: 640px) {
+  .manual-form-header {
+    padding: 16px 18px;
+    font-size: 1rem;
+  }
+
+  .manual-form-notice,
+  .manual-form-body {
+    padding: 16px;
+  }
+
+  .manual-field-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .manual-form-footer {
+    padding: 14px 16px;
+    flex-wrap: wrap;
+  }
+
+  .manual-form-footer > * {
+    flex: 1 1 auto;
+  }
+
+  .od-open-card {
+    flex-wrap: wrap;
+  }
+
+  .od-open-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

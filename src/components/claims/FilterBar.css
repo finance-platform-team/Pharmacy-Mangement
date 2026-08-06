@@ -136,3 +136,20 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+
+@media (max-width: 640px) {
+  .filter-section-card {
+    padding: 12px 14px 14px;
+  }
+
+  .search-wrap,
+  .filter-inline-select,
+  .filter-inline-date {
+    min-width: 0;
+    flex: 1 1 140px;
+  }
+
+  .filter-section-label {
+    width: 100%;
+  }
+}

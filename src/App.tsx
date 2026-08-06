@@ -13,23 +13,31 @@ type Tab = "claims" | "ep";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("ep");
+  // Once a tab has been opened, keep it mounted (hidden via display, not
+  // unmounted) so switching back doesn't re-run that screen's data fetch.
+  const [visited, setVisited] = useState<Record<Tab, boolean>>({ ep: true, claims: false });
+
+  function selectTab(next: Tab) {
+    setTab(next);
+    setVisited((v) => (v[next] ? v : { ...v, [next]: true }));
+  }
 
   return (
     <BusinessUnitProvider>
       <PrintProvider>
         <BuStartupModal />
-        <div style={{ padding: 24 }}>
-          <div className="app-tabs" style={{ justifyContent: "space-between" }}>
-            <div style={{ display: "flex", gap: 8 }}>
+        <div className="app-shell">
+          <div className="app-tabs app-tabs-row">
+            <div className="app-tabs-group">
               <button
                 className={`app-tab-btn ${tab === "ep" ? "active" : ""}`}
-                onClick={() => setTab("ep")}
+                onClick={() => selectTab("ep")}
               >
                 <Icon name="file-earmark-medical" /> eprescription
               </button>
               <button
                 className={`app-tab-btn ${tab === "claims" ? "active" : ""}`}
-                onClick={() => setTab("claims")}
+                onClick={() => selectTab("claims")}
               >
                 <Icon name="list-ul" /> Queue Claims
               </button>
@@ -37,7 +45,19 @@ export default function App() {
             <BuSelector />
           </div>
 
-          {tab === "claims" ? <ClaimsScreen /> : <EpScreen />}
+          {/* A screen mounts on first visit and stays mounted (hidden via
+              display, not unmounted) so switching back doesn't re-run its
+              data fetch. */}
+          {visited.ep && (
+            <div style={{ display: tab === "ep" ? "block" : "none" }}>
+              <EpScreen />
+            </div>
+          )}
+          {visited.claims && (
+            <div style={{ display: tab === "claims" ? "block" : "none" }}>
+              <ClaimsScreen />
+            </div>
+          )}
         </div>
       </PrintProvider>
     </BusinessUnitProvider>

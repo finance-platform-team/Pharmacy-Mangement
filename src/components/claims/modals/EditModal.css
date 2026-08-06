@@ -137,3 +137,54 @@
   height: 1px;
   background: rgba(140, 138, 124, 0.3);
 }
+
+/* Bleeds to the modal's edges — the -22px/22px pair must match
+   .modal-u-body's own horizontal padding (see Modal.css) or this
+   overflows sideways and forces a horizontal scrollbar. */
+.edit-sticky-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--green-200);
+  position: sticky;
+  bottom: -20px;
+  background: var(--green-100);
+  margin-left: -22px;
+  margin-right: -22px;
+  margin-bottom: -20px;
+  padding-left: 22px;
+  padding-right: 22px;
+  padding-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .edit-field-grid,
+  .edit-section-row {
+    grid-template-columns: 1fr;
+  }
+
+  .edit-body-row {
+    flex-direction: column;
+  }
+
+  .edit-side-col {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .edit-sticky-footer {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: 16px;
+    padding-right: 16px;
+    flex-wrap: wrap;
+  }
+
+  .edit-sticky-footer > * {
+    flex: 1 1 auto;
+  }
+}

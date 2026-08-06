@@ -193,6 +193,17 @@ export default function ClaimRow({
         <div className="actions-cell">
           <button
             type="button"
+            className="btn-t btn-edit-mobile"
+            disabled={busy}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenEdit(c);
+            }}
+          >
+            <Icon name="pencil-square" /> View / Edit
+          </button>
+          <button
+            type="button"
             className="btn-t btn-pending"
             disabled={!canPending || busy}
             onClick={() => onPending(c)}

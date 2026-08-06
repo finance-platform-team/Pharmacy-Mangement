@@ -219,3 +219,34 @@ table.ep-table tbody tr.ep-row-manual {
   margin-top: 6px;
   padding-left: 4px;
 }
+
+button.ep-row-view-btn {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .ep-search-input {
+    width: 100%;
+  }
+
+  .ep-daterange-bar {
+    padding: 10px 12px;
+  }
+
+  table.ep-table th,
+  table.ep-table td {
+    padding: 10px 12px;
+  }
+
+}
+
+/* Double-click/double-tap to open a row is unreliable on touchscreens.
+   Gate on touch capability (no hover, coarse pointer) rather than viewport
+   width alone — some embedding hosts (e.g. Power Apps) render at a narrow
+   logical width and scale visually, which makes width-only media queries
+   fire on real desktops too. */
+@media (hover: none) and (pointer: coarse) {
+  button.ep-row-view-btn {
+    display: inline-flex !important;
+  }
+}
