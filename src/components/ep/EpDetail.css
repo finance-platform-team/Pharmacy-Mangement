@@ -1,0 +1,220 @@
+.ep-detail-header {
+  background: linear-gradient(135deg, #2e372d 0%, #3a4d3a 50%, #3c4b35 100%);
+  border-radius: 18px 18px 0 0;
+  padding: 28px 32px 24px;
+  color: #efe2ce;
+}
+
+.ep-detail-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.ep-detail-header-top h1 {
+  font-family: var(--font-head);
+  font-size: 1.5rem;
+  color: #dbc7ac;
+  margin: 0;
+}
+
+.ep-detail-subtitle {
+  font-size: 12.5px;
+  color: rgba(220, 200, 172, 0.65);
+  margin-top: 4px;
+}
+
+.ep-detail-visitid-badge {
+  background: rgba(160, 133, 97, 0.2);
+  border: 1px solid rgba(160, 133, 97, 0.35);
+  border-radius: 10px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #dbc7ac;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+.ep-detail-header-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px 24px;
+}
+
+.ep-detail-header-field label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(220, 200, 172, 0.55);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.ep-detail-header-field .val {
+  font-size: 15px;
+  font-weight: 600;
+  color: #efe2ce;
+}
+
+.ep-detail-body {
+  background: #fff;
+  border-left: 1px solid rgba(150, 148, 136, 0.26);
+  border-right: 1px solid rgba(150, 148, 136, 0.26);
+  border-bottom: 1px solid rgba(150, 148, 136, 0.26);
+  border-radius: 0 0 18px 18px;
+  overflow: hidden;
+}
+
+.ep-detail-section {
+  padding: 24px 32px;
+  border-bottom: 1.5px solid rgba(150, 148, 136, 0.2);
+}
+
+.ep-detail-section:last-child {
+  border-bottom: none;
+}
+
+.ep-detail-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6b6b5e;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(150, 148, 136, 0.2);
+}
+
+.ep-detail-section-title i {
+  color: var(--gold-500);
+  font-size: 14px;
+}
+
+.ep-detail-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 18px 24px;
+}
+
+.ep-detail-info-field label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #6b6b5e;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.ep-detail-info-pill {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--green-600);
+  background: var(--green-100);
+  border: 1px solid rgba(140, 138, 124, 0.44);
+  border-radius: 6px;
+  padding: 3px 10px;
+  display: inline-block;
+}
+
+.ep-detail-diagnosis {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--green-600);
+  background: var(--green-100);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(150, 148, 136, 0.2);
+}
+
+.ep-detail-meds-empty {
+  text-align: center;
+  padding: 32px 24px;
+}
+
+.ep-detail-meds-empty i {
+  font-size: 36px;
+  color: var(--gold-400);
+  display: block;
+  margin-bottom: 10px;
+}
+
+.ep-detail-med-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(150, 145, 130, 0.1);
+}
+
+.ep-detail-med-item:last-child {
+  border-bottom: none;
+}
+
+.ep-detail-med-num {
+  min-width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--gold-300), var(--gold-200));
+  color: var(--gold-600);
+  border: 1px solid rgba(160, 133, 97, 0.4);
+}
+
+.ep-detail-med-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
+.ep-detail-med-item div div {
+  font-size: 12px;
+  color: #6b6b5e;
+  margin-top: 2px;
+}
+
+.ep-detail-notes-box {
+  background: linear-gradient(135deg, var(--green-100), var(--gold-300));
+  border: 1px solid rgba(160, 133, 97, 0.4);
+  border-left: 3px solid var(--gold-500);
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-size: 13.5px;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+@media (max-width: 640px) {
+  .ep-detail-header {
+    padding: 20px 18px 18px;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .ep-detail-header-top h1 {
+    font-size: 1.2rem;
+  }
+
+  .ep-detail-section {
+    padding: 18px 16px;
+  }
+
+  .ep-detail-header-grid,
+  .ep-detail-info-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 14px 16px;
+  }
+}

@@ -1,0 +1,190 @@
+.flabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.fcontrol {
+  border: 1.5px solid var(--green-200);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-family: var(--font-body);
+  font-size: 0.83rem;
+  width: 100%;
+  color: var(--text);
+  background: var(--white);
+  outline: none;
+  transition: var(--t);
+}
+
+.fcontrol:focus {
+  border-color: var(--green-500);
+  box-shadow: 0 0 0 3px rgba(73, 96, 76, 0.1);
+}
+
+.fcontrol[readonly] {
+  background: var(--green-100);
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.edit-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.edit-field-grid.full {
+  grid-template-columns: 1fr;
+}
+
+.med-item {
+  background: var(--white);
+  border: 1px solid var(--green-200);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+}
+
+.med-item span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.edit-section-card {
+  background: var(--white);
+  border: 1px solid var(--green-200);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-top: 16px;
+}
+
+.edit-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+
+.edit-section-empty {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.edit-section-empty i {
+  font-size: 1.8rem;
+  display: block;
+  margin-bottom: 8px;
+  opacity: 0.6;
+}
+.edit-section-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.edit-section-row .edit-section-card {
+  margin-top: 0;
+}
+.edit-body-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.edit-main-col {
+  flex: 2;
+  min-width: 0;
+}
+
+.edit-side-col {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.fcontrol-highlight {
+  background: #fdf3e7 !important;
+  border-color: #f0ddc0 !important;
+}
+.edit-divider-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 12px;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.edit-divider-section::before,
+.edit-divider-section::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(140, 138, 124, 0.3);
+}
+
+/* Bleeds to the modal's edges — the -22px/22px pair must match
+   .modal-u-body's own horizontal padding (see Modal.css) or this
+   overflows sideways and forces a horizontal scrollbar. */
+.edit-sticky-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--green-200);
+  position: sticky;
+  bottom: -20px;
+  background: var(--green-100);
+  margin-left: -22px;
+  margin-right: -22px;
+  margin-bottom: -20px;
+  padding-left: 22px;
+  padding-right: 22px;
+  padding-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .edit-field-grid,
+  .edit-section-row {
+    grid-template-columns: 1fr;
+  }
+
+  .edit-body-row {
+    flex-direction: column;
+  }
+
+  .edit-side-col {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .edit-sticky-footer {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: 16px;
+    padding-right: 16px;
+    flex-wrap: wrap;
+  }
+
+  .edit-sticky-footer > * {
+    flex: 1 1 auto;
+  }
+}

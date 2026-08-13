@@ -1,0 +1,43 @@
+:root {
+  --green-600: #2e372d;
+  --green-500: #49604c;
+  --green-400: #51604e;
+  --green-300: #a4a996;
+  --green-200: #d0dece;
+  --green-100: #f6f7f0;
+
+  --gold-600: #28170c;
+  --gold-500: #a08561;
+  --gold-400: #dbc7ac;
+  --gold-300: #efe2ce;
+  --gold-200: #e6dbcd;
+  --gold-100: #f8e5ca;
+
+  --primary: #49604c;
+  --primary-dk: #2e372d;
+  --bg: #f6f7f0;
+  --white: #ffffff;
+  --text: #211c1e;
+  --text-muted: #5f6b5a;
+  --danger: #9b3b3b;
+
+  --approved-bg: #e8f5e9;
+  --dispensed-bg: #c8e6c9;
+  --pending-bg: #fffde7;
+
+  --shadow-sm: 0 2px 12px rgba(46, 55, 45, 0.08);
+  --shadow-md: 0 6px 24px rgba(46, 55, 45, 0.12);
+  --shadow-lg: 0 12px 40px rgba(46, 55, 45, 0.15);
+
+  --radius: 12px;
+  --radius-sm: 8px;
+
+  --font-head: "DM Sans", sans-serif;
+  --font-body: "DM Sans", sans-serif;
+  --t: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Breakpoint convention used across the app's @media queries:
+   <=640px  phones
+   <=768px  small tablets / phones landscape
+   <=1024px tablets / small laptops */

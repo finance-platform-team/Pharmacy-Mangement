@@ -1,0 +1,325 @@
+.manual-form-card {
+  background: #fff;
+  border-radius: 18px;
+  border-top: 3px solid var(--gold-500);
+  border: 1px solid rgba(150, 148, 136, 0.26);
+  box-shadow: 0 4px 20px rgba(60, 52, 38, 0.11);
+  overflow: hidden;
+}
+
+.manual-form-header {
+  background: linear-gradient(135deg, #2e372d, #3c4b3b);
+  padding: 22px 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-head);
+  font-size: 1.1rem;
+  color: #dbc7ac;
+}
+
+.manual-form-notice {
+  padding: 18px 28px;
+  background: linear-gradient(135deg, #fff8ee, #fef3e2);
+  border-bottom: 1.5px solid rgba(160, 133, 97, 0.3);
+  font-size: 12.5px;
+  color: #7a5c2e;
+  line-height: 1.55;
+}
+
+.manual-form-body {
+  padding: 28px;
+}
+
+.manual-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.manual-field-grid.full {
+  grid-template-columns: 1fr;
+}
+
+.manual-field label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8a8a78;
+  margin-bottom: 7px;
+}
+
+.manual-field label .required-badge {
+  color: #fff;
+  background: #b83e3e;
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 20px;
+  margin-left: 5px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.manual-field input,
+.manual-field select,
+.manual-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  border: 1.5px solid rgba(140, 138, 124, 0.38);
+  border-radius: 10px;
+  background: #fff;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--text);
+  outline: none;
+  transition: all 0.2s;
+}
+
+.manual-field input:focus,
+.manual-field select:focus,
+.manual-field textarea:focus {
+  border-color: var(--gold-500);
+  box-shadow: 0 0 0 3px rgba(160, 133, 97, 0.13);
+}
+
+.manual-field input.err,
+.manual-field select.err {
+  border-color: #b83e3e;
+}
+
+.manual-field-error {
+  font-size: 11px;
+  color: #b83e3e;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.manual-form-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 18px 28px;
+  background: var(--green-100);
+  border-top: 1px solid rgba(150, 148, 136, 0.2);
+}
+.opd-results-box {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: #fff;
+  border: 1px solid rgba(140, 138, 124, 0.44);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(60, 52, 38, 0.15);
+  margin-top: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.opd-results-empty {
+  padding: 16px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.opd-result-item {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.opd-result-item:hover {
+  background: #f9f9f9;
+}
+
+.opd-result-patient {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gold-500);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.opd-result-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.opd-result-doctor {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.opd-result-date {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--gold-500);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.opd-result-specialty {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.manual-type-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, var(--green-100), #eeeae2);
+  border: 1.5px solid rgba(160, 133, 97, 0.3);
+  border-radius: 12px;
+  padding: 10px 16px;
+}
+
+.manual-type-toggle > i {
+  color: var(--gold-500);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.manual-type-toggle-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8a7050;
+  margin-bottom: 3px;
+}
+
+.manual-type-btn {
+  padding: 6px 16px;
+  border: 1.5px solid rgba(160, 133, 97, 0.4);
+  border-radius: 8px;
+  background: rgba(160, 133, 97, 0.12);
+  color: #8a7050;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.manual-type-btn.active {
+  background: linear-gradient(135deg, #2e372d, #3c4b3b);
+  color: #dbc7ac;
+}
+
+.manual-type-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.06em;
+}
+
+.manual-type-badge.external {
+  background: #b83e3e;
+  color: #fff;
+}
+
+.manual-type-badge.opd {
+  background: #2e372d;
+  color: #dbc7ac;
+}
+
+.manual-field select:disabled,
+.manual-field input:disabled {
+  background: #e9ecef;
+  color: var(--text-muted);
+}
+.od-open-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: var(--green-100);
+  border: 1px solid rgba(140, 138, 124, 0.25);
+  border-radius: 10px;
+}
+.od-open-card > i {
+  font-size: 28px;
+  color: var(--gold-500);
+  flex-shrink: 0;
+}
+.od-open-text {
+  flex: 1;
+}
+.od-open-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+.od-open-sub {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+.od-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  background: var(--green-500);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.od-open-btn:hover {
+  background: var(--green-600);
+}
+
+@media (max-width: 640px) {
+  .manual-form-header {
+    padding: 16px 18px;
+    font-size: 1rem;
+  }
+
+  .manual-form-notice,
+  .manual-form-body {
+    padding: 16px;
+  }
+
+  .manual-field-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .manual-form-footer {
+    padding: 14px 16px;
+    flex-wrap: wrap;
+  }
+
+  .manual-form-footer > * {
+    flex: 1 1 auto;
+  }
+
+  .od-open-card {
+    flex-wrap: wrap;
+  }
+
+  .od-open-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

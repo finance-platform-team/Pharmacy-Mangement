@@ -1,0 +1,62 @@
+.app-shell {
+  padding: 24px;
+}
+
+.app-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-bottom: 2px solid rgba(140, 138, 124, 0.44);
+  margin: 0 0 24px;
+}
+
+.app-tabs-row {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+.app-tabs-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    padding: 12px;
+  }
+
+  .app-tab-btn {
+    padding: 8px 14px;
+    font-size: 12.5px;
+  }
+}
+
+.app-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 22px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+  transition: all 0.2s;
+}
+
+.app-tab-btn:hover {
+  color: var(--green-600);
+}
+
+.app-tab-btn.active {
+  color: var(--green-600);
+  border-bottom-color: var(--gold-500);
+  font-weight: 600;
+}
