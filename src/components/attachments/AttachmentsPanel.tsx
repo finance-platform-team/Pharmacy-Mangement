@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Visit } from "../../domain/types";
 import type { SpAttachmentVisit, SpFile } from "../../domain/ٍSpAttachments";
 import {
-  predictOneDriveLink,
   spDeleteFile,
+  spDownloadBlob,
+  spFetchFileDataUrl,
+  spFileKind,
+  spIsAllowedFile,
   spListFiles,
-  spPrintFile,
   spUploadFile,
 } from "../../domain/ٍSpAttachments";
 import Icon from "../ui/Icon";
@@ -13,6 +15,7 @@ import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import ToastStack from "../ui/ToastStack";
 import { useToast } from "../../hooks/useToast";
+import { usePrint } from "../../PrintContext";
 import "./AttachmentsPanel.css";
 
 interface AttachmentsPanelProps {
@@ -29,29 +32,7 @@ interface AttachmentsPanelProps {
   showToast?: (text: string, type?: "ok" | "err" | "warn") => void;
 }
 
-const ALLOWED_ATTACHMENT_MIME_PREFIXES = ["image/"];
-const ALLOWED_ATTACHMENT_MIME_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-];
-const ALLOWED_ATTACHMENT_EXTENSIONS = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"];
-
-const ATTACHMENT_ACCEPT =
-  "image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx," +
-  ALLOWED_ATTACHMENT_MIME_TYPES.join(",");
-
-/** Only PDFs, Word/Excel documents, and images may be uploaded as attachments. */
-function isAllowedAttachment(file: File): boolean {
-  if (ALLOWED_ATTACHMENT_MIME_PREFIXES.some((p) => file.type.startsWith(p))) return true;
-  if (ALLOWED_ATTACHMENT_MIME_TYPES.includes(file.type)) return true;
-  const name = file.name.toLowerCase();
-  return ALLOWED_ATTACHMENT_EXTENSIONS.some((ext) => name.endsWith(ext));
-}
+const SP_BLOCKED_HINT = "Executable/app files are not allowed for security reasons.";
 
 /** Maps the domain Visit (or an already-minimal object) into the shape the SharePoint flow needs. */
 function toSpAttachmentVisit(v: Visit | SpAttachmentVisit): SpAttachmentVisit {
@@ -61,6 +42,7 @@ function toSpAttachmentVisit(v: Visit | SpAttachmentVisit): SpAttachmentVisit {
     buText: v.buText,
     patientName: v.patientName,
     patientPhone: v.patientPhone,
+    documentsLink: v.documentsLink,
   };
 }
 
@@ -82,7 +64,12 @@ export default function AttachmentsPanel({ visit, defaultOpen = false, showToast
   const [dragOver, setDragOver] = useState(false);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
   const [confirmDeleteFile, setConfirmDeleteFile] = useState<SpFile | null>(null);
+  const [busyPath, setBusyPath] = useState<string | null>(null);
+  // "image" only — PDFs are downloaded instead (see handleView), since the
+  // host CSP won't allow framing/embedding a data: URI.
+  const [previewFile, setPreviewFile] = useState<{ dataUrl: string; name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { requestPrint } = usePrint();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -105,17 +92,18 @@ export default function AttachmentsPanel({ visit, defaultOpen = false, showToast
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, visit.id]);
 
+
   const handleUpload = async (fileList: FileList | File[] | null | undefined) => {
     const files = fileList ? Array.from(fileList) : [];
     if (files.length === 0) return;
 
-    const allowed = files.filter(isAllowedAttachment);
+    const allowed = files.filter(spIsAllowedFile);
     const rejected = files.length - allowed.length;
     if (rejected > 0) {
       showToast(
         rejected === files.length
-          ? "File type not allowed — only PDF, Word, Excel, PowerPoint, or image files are accepted"
-          : `${rejected} file(s) skipped — only PDF, Word, Excel, PowerPoint, or image files are accepted`,
+          ? `File type not allowed. ${SP_BLOCKED_HINT}`
+          : `${rejected} file(s) skipped. ${SP_BLOCKED_HINT}`,
         "err",
       );
     }
@@ -158,9 +146,71 @@ export default function AttachmentsPanel({ visit, defaultOpen = false, showToast
     }
   };
 
-  const handlePrint = (f: SpFile) => {
-    const ok = spPrintFile(f.url, f.name);
-    if (!ok) showToast("Please allow pop-ups to print", "warn");
+  const closePreview = () => {
+    setPreviewFile(null);
+  };
+
+  useEffect(() => {
+    if (!previewFile) return;
+    // Capture phase, so this runs BEFORE the parent <Modal>'s own Escape
+    // listener (which is bubble-phase, on `document`) — stopPropagation()
+    // here keeps Escape from also closing the Edit modal behind us.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      closePreview();
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [previewFile]);
+
+  const handleView = async (f: SpFile) => {
+    setBusyPath(f.path);
+    const kind = spFileKind(f.name, f.url);
+    showToast("Loading file…", "ok");
+    try {
+      const dataUrl = await spFetchFileDataUrl(spVisit, f.path, f.name);
+      // PDFs can't be framed/embedded under this host's CSP (frame-src/
+      // object-src only allow 'self' or the SharePoint domain, not a data:
+      // URI), and opening the real SharePoint URL in a new tab depended on
+      // an SSO session that wasn't reliably there — so, same as Word/Excel,
+      // just download it immediately instead.
+      if (kind === "other" || kind === "pdf") {
+        spDownloadBlob(dataUrl, f.name);
+        showToast(
+          kind === "pdf" ? "Downloaded ✓" : "Downloaded — this file type can't be previewed here",
+          "ok",
+        );
+        return;
+      }
+      setPreviewFile({ dataUrl, name: f.name });
+    } catch (e) {
+      showToast((e as Error).message || "Couldn't load this file", "err");
+    } finally {
+      setBusyPath(null);
+    }
+  };
+
+  const handlePrint = async (f: SpFile) => {
+    setBusyPath(f.path);
+    const kind = spFileKind(f.name, f.url);
+    showToast("Preparing file…", "ok");
+    try {
+      const dataUrl = await spFetchFileDataUrl(spVisit, f.path, f.name);
+      if (kind === "other" || kind === "pdf") {
+        spDownloadBlob(dataUrl, f.name);
+        showToast("Downloaded — open it to print from its own app", "ok");
+        return;
+      }
+      // image — route through the app's shared print portal (#printArea)
+      requestPrint(
+        <img src={dataUrl} alt={f.name} style={{ display: "block", width: "100%", height: "auto" }} />,
+      );
+    } catch (e) {
+      showToast((e as Error).message || "Couldn't load this file for printing", "err");
+    } finally {
+      setBusyPath(null);
+    }
   };
 
   return (
@@ -180,14 +230,18 @@ export default function AttachmentsPanel({ visit, defaultOpen = false, showToast
             <button type="button" className="btn-t od-btn" onClick={load} disabled={loading}>
               <Icon name="arrow-clockwise" /> Refresh
             </button>
-            <a
-              className="btn-t od-btn"
-              href={predictOneDriveLink(spVisit)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Icon name="box-arrow-up-right" /> Open Folder
-            </a>
+            {spVisit.documentsLink ? (
+              <a
+                className="btn-t od-btn"
+                href={spVisit.documentsLink}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Icon name="box-arrow-up-right" /> Open Folder
+              </a>
+            ) : (
+              <span className="od-btn od-btn-hint">Folder link appears after first upload</span>
+            )}
           </div>
 
           <div
@@ -207,7 +261,6 @@ export default function AttachmentsPanel({ visit, defaultOpen = false, showToast
             <input
               ref={fileInputRef}
               type="file"
-              accept={ATTACHMENT_ACCEPT}
               multiple
               hidden
               onChange={(e) => {
@@ -240,10 +293,20 @@ export default function AttachmentsPanel({ visit, defaultOpen = false, showToast
                   {f.name}
                 </span>
                 <div className="attach-actions">
-                  <a className="btn-u btn-u-sm btn-u-success" href={f.url} target="_blank" rel="noreferrer">
-                    View
-                  </a>
-                  <button type="button" className="btn-u btn-u-sm btn-u-primary" onClick={() => handlePrint(f)}>
+                  <button
+                    type="button"
+                    className="btn-u btn-u-sm btn-u-success"
+                    disabled={busyPath === f.path}
+                    onClick={() => handleView(f)}
+                  >
+                    <Icon name="eye" /> View
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-u btn-u-sm btn-u-primary"
+                    disabled={busyPath === f.path}
+                    onClick={() => handlePrint(f)}
+                  >
                     <Icon name="printer" /> Print
                   </button>
                   <button
@@ -279,6 +342,19 @@ export default function AttachmentsPanel({ visit, defaultOpen = false, showToast
           </div>
         )}
       </Modal>
+
+      {/* Full-screen image preview — fetched as a data: URI (the Power Apps
+          host's CSP blocks blob: for img-src, so blob URLs never render here) */}
+      {previewFile && (
+        <div className="attach-preview-overlay" onClick={closePreview}>
+          <button type="button" className="attach-preview-close" onClick={closePreview}>
+            <Icon name="x-lg" />
+          </button>
+          <div className="attach-preview-media" onClick={(e) => e.stopPropagation()}>
+            <img src={previewFile.dataUrl} alt={previewFile.name} className="attach-preview-image" />
+          </div>
+        </div>
+      )}
 
       {/* Only render our own toast stack when the parent didn't give us one */}
       {!externalToast && <ToastStack toasts={localToast.toasts} />}

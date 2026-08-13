@@ -29,9 +29,21 @@ export async function pendingVisit(visitId: string, userId: string) {
   });
 }
 
-export async function approveVisit(visitId: string, userId: string) {
+/**
+ * Mirrors PHWEBRESCOURCE.HTML's approve handler: records minutes elapsed
+ * from Attended to Approved (crf79_attendapprovetime) — shown as the
+ * "Attend → Approve" KPI and used as a fallback in the dispense wait-time
+ * calc (see dispenseVisit below). The primary Approve path previously
+ * never persisted this field at all.
+ */
+export async function approveVisit(visitId: string, userId: string, attendedTime?: string | null) {
+  const attendApproveMin = attendedTime
+    ? Math.max(0, Math.round((Date.now() - new Date(attendedTime).getTime()) / 60000))
+    : undefined;
+
   return Crf79_visitsesService.update(visitId, {
     crf79_status: STATUS.APPROVED,
+    crf79_attendapprovetime: attendApproveMin,
     ...(userId ? { "crf79_approvedby@odata.bind": userBind(userId) } : {}),
   });
 }

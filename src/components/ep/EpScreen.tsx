@@ -20,13 +20,15 @@ import GetPatientPrescriptionModal from "../shared/GetPatientPrescriptionModal";
 import AttachmentsPanel from "../attachments/AttachmentsPanel";
 
 export default function EpScreen() {
-  const { visits, loading, reload, setDateRange } = useEpVisits();
+  const [detailVisit, setDetailVisit] = useState<Visit | null>(null);
+  // Pause background polling while the prescription detail screen is open —
+  // matches PHWEBRESCOURCE.HTML's isUserBusy() check for #epViewDetail.
+  const { visits, loading, reload, setDateRange } = useEpVisits(!!detailVisit);
   const { toasts, showToast } = useToast();
   const { systemUserId } = useCurrentUser();
   const { draft, cancel, busyId } = useEpActions({ showToast, reload });
 
   const [showManual, setShowManual] = useState(false);
-  const [detailVisit, setDetailVisit] = useState<Visit | null>(null);
   const [draftModalVisit, setDraftModalVisit] = useState<Visit | null>(null);
   const [cancelModalVisit, setCancelModalVisit] = useState<Visit | null>(null);
   const [unavailModalVisit, setUnavailModalVisit] = useState<Visit | null>(null);

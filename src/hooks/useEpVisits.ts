@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Crf79_visitsesService } from "../generated/services/Crf79_visitsesService";
 import { Crf79_patientsesService } from "../generated/services/Crf79_patientsesService";
 import type { Crf79_patientses } from "../generated/models/Crf79_patientsesModel";
 import { mapVisit } from "../domain/mappers";
+import { mergeVisits } from "../domain/mergeVisits";
 import type { Visit } from "../domain/types";
 import { getLocalDateStr } from "../utils/format";
 import { Crf79_medicationsesService } from "../generated/services/Crf79_medicationsesService";
 import type { Crf79_medicationses } from "../generated/models/Crf79_medicationsesModel";
 import { useBusinessUnitContext } from "../BusinessUnitContext";
+import { isAnyModalOpen } from "../utils/uiBusy";
 
 const AUTO_REFRESH_MS = 5000;
 
@@ -132,7 +134,15 @@ interface UseEpVisitsResult {
   setDateRange: (from: string, to: string) => void;
 }
 
-export function useEpVisits(): UseEpVisitsResult {
+/**
+ * @param paused - While true, background polling is skipped (initial/manual
+ * loads still work). Mirrors PHWEBRESCOURCE.HTML's isUserBusy() check for
+ * `#epViewDetail` — pass `!!detailVisit` so viewing a prescription's detail
+ * screen doesn't keep silently re-fetching behind it. Read from a ref, not a
+ * polling-effect dependency, so toggling it never tears down/restarts the
+ * loop (which would otherwise trigger a blocking reload).
+ */
+export function useEpVisits(paused = false): UseEpVisitsResult {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,6 +150,11 @@ export function useEpVisits(): UseEpVisitsResult {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const { selectedBuId, ARC_GUID, AAC_GUID, SMH_GUID } = useBusinessUnitContext();
+
+  const pausedRef = useRef(paused);
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
 
   const reload = useCallback(() => setReloadToken((n) => n + 1), []);
   const setDateRange = useCallback((from: string, to: string) => {
@@ -149,9 +164,17 @@ export function useEpVisits(): UseEpVisitsResult {
 
   useEffect(() => {
     let cancelled = false;
+    // Sync cursor for delta (silent) refreshes — reset fresh each time this
+    // effect (re)starts, e.g. on BU/date-range change or an explicit reload().
+    let lastLoadTime: string | null = null;
 
-    // silent = true: background refresh, no spinner, errors swallowed
-    // (so it never disrupts what the user is currently looking at).
+    // silent = true: background refresh, no spinner, errors swallowed (so it
+    // never disrupts what the user is currently looking at) — AND fetches
+    // only records modified since the last successful load instead of the
+    // full window, merging them into the existing list instead of replacing
+    // it wholesale. Mirrors PHWEBRESCOURCE.HTML's loadAllData(silent, ...,
+    // deltaOnly) — the periodic auto-refresh always calls it with both flags
+    // true together.
     async function load(silent: boolean) {
       if (!silent) {
         setLoading(true);
@@ -159,9 +182,14 @@ export function useEpVisits(): UseEpVisitsResult {
       }
       try {
         const buFilter = buildBuFilter(selectedBuId, ARC_GUID, AAC_GUID, SMH_GUID);
+        let filter = buildEpFilter(dateFrom, dateTo, buFilter);
+        if (silent && lastLoadTime) {
+          filter = `${filter} and modifiedon gt ${lastLoadTime}`;
+        }
+
         const result = await Crf79_visitsesService.getAll({
           select: EP_SELECT,
-          filter: buildEpFilter(dateFrom, dateTo, buFilter),
+          filter,
           orderBy: ["modifiedon desc"],
           top: 1000,
         });
@@ -169,16 +197,42 @@ export function useEpVisits(): UseEpVisitsResult {
         if (cancelled) return;
         const rawVisits = result.data ?? [];
 
+        // Advance the cursor to the newest modifiedon actually returned by
+        // the server (not the client's wall clock) — avoids overlapping
+        // poll windows, the classic cause of the same record being
+        // re-reported as "updated" on back-to-back polls.
+        let maxModified: number | null = null;
+        for (const v of rawVisits) {
+          if (!v.modifiedon) continue;
+          const t = new Date(v.modifiedon).getTime();
+          if (!isNaN(t) && (maxModified === null || t > maxModified)) maxModified = t;
+        }
+        if (maxModified !== null) {
+          // +1ms so this exact record isn't re-matched by "gt" next poll.
+          lastLoadTime = new Date(maxModified + 1).toISOString();
+        } else if (!silent || !lastLoadTime) {
+          // No records this round, and no prior cursor (or this is a full
+          // load) — establish a starting point close to "now".
+          lastLoadTime = new Date(Date.now() - 10000).toISOString();
+        }
+        // else: a delta poll found nothing — leave the cursor untouched.
+
+        if (silent && rawVisits.length === 0) {
+          // Nothing changed this poll — skip the patient/meds lookups and
+          // the setVisits call entirely (no re-render for a no-op update).
+          return;
+        }
+
         const patientIds = Array.from(
           new Set(
             rawVisits.map((v) => v._crf79_patient_value).filter((id): id is string => !!id),
           ),
         );
 
-        const patientsById = await fetchPatientsByIds(patientIds);
-        const medsByVisit = await fetchMedicationsByVisitIds(
-          rawVisits.map((v) => v.crf79_visitsid),
-        );
+        const [patientsById, medsByVisit] = await Promise.all([
+          fetchPatientsByIds(patientIds),
+          fetchMedicationsByVisitIds(rawVisits.map((v) => v.crf79_visitsid)),
+        ]);
         if (cancelled) return;
 
         const mapped = rawVisits.map((v) =>
@@ -188,7 +242,12 @@ export function useEpVisits(): UseEpVisitsResult {
             medsByVisit[v.crf79_visitsid] ?? [],
           ),
         );
-        setVisits(mapped);
+
+        if (silent) {
+          setVisits((prev) => mergeVisits(prev, mapped));
+        } else {
+          setVisits(mapped);
+        }
       } catch (err) {
         if (!cancelled && !silent) setError(String(err));
       } finally {
@@ -196,15 +255,30 @@ export function useEpVisits(): UseEpVisitsResult {
       }
     }
 
-    load(false);
+    // Self-scheduling loop: the next refresh is only queued after the
+    // current one settles, so a slow/degraded connection can never pile up
+    // overlapping requests or let an old response land after a newer one
+    // and clobber fresh data with stale data.
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    function scheduleNext() {
+      if (cancelled) return;
+      timeoutId = setTimeout(async () => {
+        // Skip background refreshes while the tab isn't visible, while the
+        // user has a modal open, or while the caller marked us paused (e.g.
+        // the EP prescription detail screen is showing) — never disrupt
+        // what they're actively doing.
+        if (document.visibilityState === "visible" && !isAnyModalOpen() && !pausedRef.current) {
+          await load(true);
+        }
+        scheduleNext();
+      }, AUTO_REFRESH_MS);
+    }
 
-    const intervalId = setInterval(() => {
-      load(true);
-    }, AUTO_REFRESH_MS);
+    load(false).then(scheduleNext);
 
     return () => {
       cancelled = true;
-      clearInterval(intervalId);
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, [reloadToken, dateFrom, dateTo, selectedBuId, ARC_GUID, AAC_GUID, SMH_GUID]);
 

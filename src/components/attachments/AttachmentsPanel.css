@@ -57,6 +57,13 @@
   cursor: pointer;
 }
 
+.od-btn-hint {
+  border-color: transparent;
+  color: var(--text-muted);
+  cursor: default;
+  font-size: 11px;
+}
+
 .od-empty {
   text-align: center;
   padding: 30px 20px;
@@ -174,6 +181,48 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* ── Full-screen file preview overlay (View button) ─────────────────── */
+.attach-preview-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.attach-preview-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attach-preview-media {
+  max-width: 90vw;
+  max-height: 85vh;
+}
+
+.attach-preview-image {
+  max-width: 90vw;
+  max-height: 85vh;
+  border-radius: 10px;
+  object-fit: contain;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+  display: block;
 }
 
 @media (max-width: 480px) {

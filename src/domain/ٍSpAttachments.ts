@@ -1,10 +1,17 @@
 /**
  * domain/spAttachments.ts
  *
- * SharePoint-based attachments logic — replaces the old OneDrive iframe approach.
- * Ported 1:1 from the confirmed working implementation in LastPhamacy.html
- * (functions spFolderName, spFileAction, spListFiles, spDeleteFile, spPrintFile,
- * predictOneDriveLink, buildSpUploadZoneHTML, wireSpDropzone, refreshSpFileList).
+ * OneDrive-based attachments logic — replaces the old OneDrive iframe approach.
+ * Ported 1:1 from the confirmed working "Documents" implementation in
+ * PHWEBRESCOURCE.HTML (functions spFolderName, spFileAction, spListFiles,
+ * spDeleteFile, spFetchFileDataUrl, buildSpUploadZoneHTML, wireSpDropzone,
+ * refreshSpFileList). The folder link is read directly off the visit's
+ * crf79_documents column — never predicted/constructed client-side.
+ *
+ * spFetchFileDataUrl deliberately returns a data: URI rather than a blob:
+ * URL (unlike the HTML, which isn't sandboxed the same way) — the Power
+ * Apps custom-page host's CSP (img-src 'self' data:) silently blocks blob:
+ * resources, so blob: previews just hang forever with no visible error.
  *
  * Internal names keep the "OneDrive" wording on purpose, matching the HTML —
  * only user-facing text says "Documents". See PROJECT_INSTRUCTIONS.md.
@@ -21,6 +28,49 @@ export interface SpFile {
   size: number;
 }
 
+/** Blocked upload extensions — executables & dangerous types only. Everything
+ * else (documents, images, and general files) is allowed, matching the
+ * PHWEBRESCOURCE.HTML "Documents" dropzone policy. */
+export const SP_BLOCKED_EXTENSIONS = [
+  "exe", "apk", "msi", "msix", "bat", "cmd", "sh", "bash", "com", "scr",
+  "dll", "jar", "vbs", "vbe", "js", "jse", "wsf", "wsh", "ps1", "psm1",
+  "lnk", "cpl", "gadget", "msc", "app", "dmg", "pkg", "deb", "rpm",
+  "reg", "inf", "iso", "bin", "run", "action", "workflow", "command",
+];
+
+export function spIsAllowedFile(file: File): boolean {
+  const ext = file.name.split(".").pop()?.toLowerCase() || "";
+  return !SP_BLOCKED_EXTENSIONS.includes(ext);
+}
+
+/** "pdf" / "image" render inline; "other" (Word, Excel, PowerPoint, etc.) can't be shown in-browser. */
+export function spFileKind(fileName?: string, url?: string): "pdf" | "image" | "other" {
+  const name = (fileName || url || "").toLowerCase();
+  if (/\.pdf($|\?)/.test(name)) return "pdf";
+  if (/\.(jpe?g|png|gif|webp|bmp|tiff?|svg|heic|heif)($|\?)/.test(name)) return "image";
+  return "other";
+}
+
+function spMimeTypeFromName(name: string): string {
+  const ext = (name.split(".").pop() || "").toLowerCase();
+  const map: Record<string, string> = {
+    jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif",
+    webp: "image/webp", bmp: "image/bmp", tif: "image/tiff", tiff: "image/tiff",
+    svg: "image/svg+xml", pdf: "application/pdf",
+  };
+  return map[ext] || "application/octet-stream";
+}
+
+/** Triggers a real download from a data: URI (browsers can't display Office docs inline) */
+export function spDownloadBlob(dataUrl: string, fileName: string): void {
+  const a = document.createElement("a");
+  a.href = dataUrl;
+  a.download = fileName || "file";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 /** Minimal visit shape the SharePoint flow needs. `id` must be the real Dataverse GUID. */
 export interface SpAttachmentVisit {
   id: string;
@@ -28,9 +78,12 @@ export interface SpAttachmentVisit {
   buText?: string;
   patientName?: string;
   patientPhone?: string;
+  /** The visit's crf79_documents column — the real OneDrive folder link, written by the
+   * flow after the first upload. No client-side prediction; read straight off the record. */
+  documentsLink?: string;
 }
 
-type SpAction = "upload" | "list" | "delete";
+type SpAction = "upload" | "list" | "delete" | "download";
 
 /** Falls back to the branch picked in the startup modal (same key useBusinessUnit persists to). */
 function storedBuName(): string {
@@ -57,17 +110,6 @@ export function spFolderName(v: SpAttachmentVisit): string {
   return `${pName}-${phone}`;
 }
 
-/** Build the "Open Folder" link directly (no waiting on a flow-generated link) */
-export function predictOneDriveLink(v: SpAttachmentVisit): string {
-  const bu = String(v.buText || storedBuName()).trim().toUpperCase();
-  const folderName = spFolderName(v);
-  const base =
-    "https://andalusiagroupegypt.sharepoint.com/sites/DigitalTransformation/PharmacyDispensingApp/Forms/AllItems.aspx?id=";
-  const idPath = `/sites/DigitalTransformation/PharmacyDispensingApp/${bu}/${folderName}`;
-  const viewid = "2876e222-a41e-4165-bd4c-c2eb457e5f37";
-  return base + encodeURIComponent(idPath) + "&viewid=" + viewid;
-}
-
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -79,7 +121,7 @@ function fileToBase64(file: File): Promise<string> {
 
 /**
  * Low-level call to the single SharePoint attachments flow.
- * `file` is a real File for "upload", or a {name, realPath} object for "delete", or omitted for "list".
+ * `file` is a real File for "upload", or a {name, realPath} object for "delete"/"download", or omitted for "list".
  */
 export async function spFileAction(
   action: SpAction,
@@ -102,11 +144,11 @@ export async function spFileAction(
     BUtext: String(visit.buText || storedBuName()).trim().toUpperCase(),
     fileName,
     fileContentBase64: "",
-    filePath: isFile ? `${folderName}/${fileName}` : folderName,
+    filePath: file ? `${folderName}/${fileName}` : folderName,
     PatientName: visit.patientName || "",
     PatientPhone: visit.patientPhone || "",
     DeletedFile:
-      action === "delete" && file && "realPath" in (file as SpDeleteTarget)
+      (action === "delete" || action === "download") && file && "realPath" in (file as SpDeleteTarget)
         ? (file as SpDeleteTarget).realPath
         : "",
   };
@@ -123,23 +165,62 @@ export async function spFileAction(
 
   if (!resp.ok) {
     const errText = await resp.text().catch(() => String(resp.status));
-    throw new Error(`SharePoint flow failed (${resp.status}): ${errText}`);
+    let message = errText;
+    try {
+      const parsed = JSON.parse(errText) as { error?: { message?: string } };
+      message = parsed?.error?.message || errText;
+    } catch {
+      // Not JSON — fall back to the raw text below.
+    }
+    if (message.length > 200) message = `${message.slice(0, 200)}…`;
+    throw new Error(`SharePoint flow failed (${resp.status}): ${message}`);
   }
 
   return resp.json().catch(() => null);
 }
 
-/** List files in the visit's SharePoint folder — flow returns a bare array (or {files:[]}/{value:[]}) */
+/**
+ * List files in the visit's OneDrive folder.
+ * Ported 1:1 from PHWEBRESCOURCE.HTML's spListFiles: unwraps common wrapper
+ * shapes ({body:[...]}, {files:[...]}, {value:[...]}), flattens one level in
+ * case entries arrive grouped as nested arrays, then de-dupes — the flow has
+ * been observed to return each file twice.
+ */
 export async function spListFiles(visit: SpAttachmentVisit): Promise<SpFile[]> {
-  const data = await spFileAction("list", visit, null);
-  if (Array.isArray(data)) return data as SpFile[];
-  if (data && Array.isArray((data as { files?: SpFile[] }).files)) {
-    return (data as { files: SpFile[] }).files;
+  let raw: unknown = await spFileAction("list", visit, null).catch((err) => {
+    // A "list" failure almost always just means the folder doesn't exist yet
+    // (brand-new patient, never uploaded anything) — not a real error.
+    console.warn("[spListFiles] treating failure as empty list:", (err as Error)?.message);
+    return [];
+  });
+
+  if (raw && !Array.isArray(raw) && (raw as { body?: unknown }).body !== undefined) {
+    raw = (raw as { body: unknown }).body;
   }
-  if (data && Array.isArray((data as { value?: SpFile[] }).value)) {
-    return (data as { value: SpFile[] }).value;
+  if (raw && !Array.isArray(raw) && Array.isArray((raw as { files?: unknown[] }).files)) {
+    raw = (raw as { files: unknown[] }).files;
   }
-  return [];
+  if (raw && !Array.isArray(raw) && Array.isArray((raw as { value?: unknown[] }).value)) {
+    raw = (raw as { value: unknown[] }).value;
+  }
+  if (!Array.isArray(raw)) return [];
+
+  const flat: SpFile[] = [];
+  for (const item of raw as unknown[]) {
+    if (Array.isArray(item)) flat.push(...(item as SpFile[]));
+    else if (item) flat.push(item as SpFile);
+  }
+
+  const seen = new Set<string>();
+  const result: SpFile[] = [];
+  for (const f of flat) {
+    if (!f || !f.name) continue;
+    const key = f.path || `${f.name}|${f.url}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(f);
+  }
+  return result;
 }
 
 /** Upload a single file to the visit's SharePoint folder (folder auto-created by the flow) */
@@ -156,30 +237,25 @@ export async function spDeleteFile(
   await spFileAction("delete", visit, { name: fileName, realPath: filePath });
 }
 
-/** Print a file (image or PDF) in a brand-new tab — no iframe, real onload-triggered print */
-export function spPrintFile(url: string, fileName?: string): boolean {
-  const isPdf = /\.pdf($|\?)/i.test(fileName || url || "");
-  const w = window.open("", "_blank");
-  if (!w) return false; // caller should toast: "Please allow pop-ups"
-
-  const doc = w.document;
-  doc.open();
-  if (isPdf) {
-    doc.write(
-      `<html><head><title>Print</title></head><body style="margin:0;">` +
-        `<embed src="${url}" type="application/pdf" style="width:100vw;height:100vh;border:none;" ` +
-        `onload="setTimeout(function(){ window.focus(); window.print(); }, 600);" />` +
-        `</body></html>`,
-    );
-  } else {
-    doc.write(
-      `<html><head><title>Print</title><style>img{max-width:100%;height:auto;display:block;margin:auto;}</style></head>` +
-        `<body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;">` +
-        `<img src="${url}" onload="window.focus(); setTimeout(function(){ window.print(); }, 200);" ` +
-        `onerror="document.body.innerHTML='&lt;p style=&quot;font-family:sans-serif;padding:20px;&quot;&gt;Could not load file for printing. &lt;a href=&quot;${url}&quot; target=&quot;_blank&quot;&gt;Open it directly&lt;/a&gt;.&lt;/p&gt;';" />` +
-        `</body></html>`,
-    );
-  }
-  doc.close();
-  return true;
+/**
+ * Fetches the file's actual bytes through our own flow (server-side, already
+ * authenticated) and turns them into a data: URI. This deliberately does NOT
+ * use blob: URLs (via URL.createObjectURL) — the Power Apps custom-page host
+ * enforces a CSP of `img-src 'self' data:`, which silently blocks blob:
+ * images/embeds (confirmed in production: previews hung forever with no
+ * error, since the CSP violation just prevents the resource from loading).
+ * data: URIs are explicitly allowed, so this is what actually works inside
+ * that sandbox — same authenticated-fetch benefit, different container.
+ */
+export async function spFetchFileDataUrl(
+  visit: SpAttachmentVisit,
+  filePath: string,
+  fileName: string,
+): Promise<string> {
+  const data = (await spFileAction("download", visit, { name: fileName, realPath: filePath })) as
+    | { content?: string; Content?: string; base64?: string }
+    | null;
+  const b64 = data?.content || data?.Content || data?.base64;
+  if (!b64) throw new Error("No file content returned by the flow");
+  return `data:${spMimeTypeFromName(fileName)};base64,${b64}`;
 }

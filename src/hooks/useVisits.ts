@@ -3,8 +3,10 @@ import { Crf79_visitsesService } from "../generated/services/Crf79_visitsesServi
 import { Crf79_patientsesService } from "../generated/services/Crf79_patientsesService";
 import type { Crf79_patientses } from "../generated/models/Crf79_patientsesModel";
 import { mapVisit } from "../domain/mappers";
+import { mergeVisits } from "../domain/mergeVisits";
 import type { Visit } from "../domain/types";
 import { getLocalDateStr } from "../utils/format";
+import { isAnyModalOpen } from "../utils/uiBusy";
 import { useBusinessUnitContext } from "../BusinessUnitContext";
 
 const AUTO_REFRESH_MS = 5000;
@@ -125,9 +127,17 @@ export function useVisits(): UseVisitsResult {
 
   useEffect(() => {
     let cancelled = false;
+    // Sync cursor for delta (silent) refreshes — reset fresh each time this
+    // effect (re)starts, e.g. on BU change or an explicit reload().
+    let lastLoadTime: string | null = null;
 
-    // silent = true: background refresh, no spinner, errors swallowed
-    // (so it never disrupts what the user is currently looking at).
+    // silent = true: background refresh, no spinner, errors swallowed (so it
+    // never disrupts what the user is currently looking at) — AND fetches
+    // only records modified since the last successful load instead of the
+    // full window, merging them into the existing list instead of replacing
+    // it wholesale. Mirrors PHWEBRESCOURCE.HTML's loadAllData(silent, ...,
+    // deltaOnly) — the periodic auto-refresh always calls it with both flags
+    // true together.
     async function load(silent: boolean) {
       if (!silent) {
         setLoading(true);
@@ -135,9 +145,14 @@ export function useVisits(): UseVisitsResult {
       }
       try {
         const buFilter = buildBuFilter(selectedBuId, ARC_GUID, AAC_GUID, SMH_GUID);
+        let filter = buildClaimsFilter(buFilter);
+        if (silent && lastLoadTime) {
+          filter = `${filter} and modifiedon gt ${lastLoadTime}`;
+        }
+
         const result = await Crf79_visitsesService.getAll({
           select: VISIT_SELECT,
-          filter: buildClaimsFilter(buFilter),
+          filter,
           orderBy: ["modifiedon desc"],
           top: 1000,
         });
@@ -145,6 +160,32 @@ export function useVisits(): UseVisitsResult {
         if (cancelled) return;
 
         const rawVisits = result.data ?? [];
+
+        // Advance the cursor to the newest modifiedon actually returned by
+        // the server (not the client's wall clock) — avoids overlapping
+        // poll windows, the classic cause of the same record being
+        // re-reported as "updated" on back-to-back polls.
+        let maxModified: number | null = null;
+        for (const v of rawVisits) {
+          if (!v.modifiedon) continue;
+          const t = new Date(v.modifiedon).getTime();
+          if (!isNaN(t) && (maxModified === null || t > maxModified)) maxModified = t;
+        }
+        if (maxModified !== null) {
+          // +1ms so this exact record isn't re-matched by "gt" next poll.
+          lastLoadTime = new Date(maxModified + 1).toISOString();
+        } else if (!silent || !lastLoadTime) {
+          // No records this round, and no prior cursor (or this is a full
+          // load) — establish a starting point close to "now".
+          lastLoadTime = new Date(Date.now() - 10000).toISOString();
+        }
+        // else: a delta poll found nothing — leave the cursor untouched.
+
+        if (silent && rawVisits.length === 0) {
+          // Nothing changed this poll — skip the patient lookup and the
+          // setVisits call entirely (no re-render for a no-op update).
+          return;
+        }
 
         const patientIds = Array.from(
           new Set(
@@ -160,7 +201,12 @@ export function useVisits(): UseVisitsResult {
         const mapped = rawVisits.map((v) =>
           mapVisit(v, patientsById[v._crf79_patient_value ?? ""]),
         );
-        setVisits(mapped);
+
+        if (silent) {
+          setVisits((prev) => mergeVisits(prev, mapped));
+        } else {
+          setVisits(mapped);
+        }
       } catch (err) {
         if (!cancelled && !silent) setError(String(err));
       } finally {
@@ -168,15 +214,29 @@ export function useVisits(): UseVisitsResult {
       }
     }
 
-    load(false);
+    // Self-scheduling loop: the next refresh is only queued after the
+    // current one settles, so a slow/degraded connection can never pile up
+    // overlapping requests or let an old response land after a newer one
+    // and clobber fresh data with stale data.
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    function scheduleNext() {
+      if (cancelled) return;
+      timeoutId = setTimeout(async () => {
+        // Skip background refreshes while the tab isn't visible, or while
+        // the user has a modal open (e.g. mid-edit in EditModal/ApproveModal)
+        // — never disrupt what they're actively doing.
+        if (document.visibilityState === "visible" && !isAnyModalOpen()) {
+          await load(true);
+        }
+        scheduleNext();
+      }, AUTO_REFRESH_MS);
+    }
 
-    const intervalId = setInterval(() => {
-      load(true);
-    }, AUTO_REFRESH_MS);
+    load(false).then(scheduleNext);
 
     return () => {
       cancelled = true;
-      clearInterval(intervalId);
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, [reloadToken, selectedBuId, ARC_GUID, AAC_GUID, SMH_GUID]);
 

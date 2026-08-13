@@ -57,7 +57,8 @@ export function useVisitActions({ showToast, reload }: UseVisitActionsOptions) {
   );
 
   const approve = useCallback(
-    (visit: Visit) => run(visit.id, "Approved", () => approveVisit(visit.id, systemUserId)),
+    (visit: Visit) =>
+      run(visit.id, "Approved", () => approveVisit(visit.id, systemUserId, visit.attendedTime)),
     [systemUserId],
   );
   const preparing = useCallback(

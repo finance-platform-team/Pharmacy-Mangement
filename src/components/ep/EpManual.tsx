@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Button from "../ui/Button";
 import Icon from "../ui/Icon";
 import SearchableSelect from "../ui/SearchableSelect";
 import { createManualPrescription, waitForQueueNo } from "../../api/epApi";
 import {
   searchOpd,
-  fetchContractorsByBU,
-  fetchPhysiciansByBU,
+  fetchAllContractors,
+  fetchAllPhysicians,
+  filterContractorsForBranch,
+  filterPhysiciansForBranch,
   type OpdSearchResult,
   type PhysicianOption,
   type ContractorOption,
@@ -60,58 +62,36 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
   const [searching, setSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
-  const [companies, setCompanies] = useState<ContractorOption[]>([]);
-  const [physicians, setPhysicians] = useState<PhysicianOption[]>([]);
+  const [allContractors, setAllContractors] = useState<Awaited<ReturnType<typeof fetchAllContractors>>>([]);
+  const [allPhysicians, setAllPhysicians] = useState<Awaited<ReturnType<typeof fetchAllPhysicians>>>([]);
 
+  // Load the full contractor/physician tables once (cached across mounts —
+  // mirrors PHWEBRESCOURCE.HTML's loadContractorCache()/loadPhysicianCache()
+  // — and re-filter client-side per branch below instead of re-querying.
   useEffect(() => {
     let cancelled = false;
-
-    async function load() {
-      if (!locationId || companyLocked) {
-        setCompanies([]);
-        return;
-      }
-      const selectedUnit = units.find((u) => u.id === locationId);
-      const buName = (selectedUnit?.name || "").toUpperCase();
-      let targetBuId = locationId;
-      if (buName === "AAC" || buName === "ARC") {
-        const smh = units.find((u) => u.name.toUpperCase() === "SMH");
-        if (smh) targetBuId = smh.id;
-      }
-      const list = await fetchContractorsByBU(targetBuId);
-      if (!cancelled) setCompanies(list);
-    }
-
-    load();
+    fetchAllContractors().then((list) => {
+      if (!cancelled) setAllContractors(list);
+    });
+    fetchAllPhysicians().then((list) => {
+      if (!cancelled) setAllPhysicians(list);
+    });
     return () => {
       cancelled = true;
     };
-  }, [locationId, companyLocked, units]);
+  }, []);
 
-  useEffect(() => {
-    let cancelled = false;
+  const companies = useMemo<ContractorOption[]>(() => {
+    if (!locationId || companyLocked) return [];
+    const selectedUnit = units.find((u) => u.id === locationId);
+    return filterContractorsForBranch(allContractors, units, locationId, selectedUnit?.name || "");
+  }, [locationId, companyLocked, units, allContractors]);
 
-    async function load() {
-      if (!locationId || mode !== "opd" || doctorLocked) {
-        setPhysicians([]);
-        return;
-      }
-      const selectedUnit = units.find((u) => u.id === locationId);
-      const buName = (selectedUnit?.name || "").toUpperCase();
-      let targetBuId = locationId;
-      if (buName === "AAC" || buName === "ARC") {
-        const smh = units.find((u) => u.name.toUpperCase() === "SMH");
-        if (smh) targetBuId = smh.id;
-      }
-      const list = await fetchPhysiciansByBU(targetBuId);
-      if (!cancelled) setPhysicians(list);
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [locationId, mode, doctorLocked, units]);
+  const physicians = useMemo<PhysicianOption[]>(() => {
+    if (!locationId || mode !== "opd" || doctorLocked) return [];
+    const selectedUnit = units.find((u) => u.id === locationId);
+    return filterPhysiciansForBranch(allPhysicians, units, locationId, selectedUnit?.name || "");
+  }, [locationId, mode, doctorLocked, units, allPhysicians]);
 
   function handleModeChange(newMode: Mode) {
     setMode(newMode);
@@ -220,7 +200,11 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
           doctorName: doctorName.trim(),
           specialty: specialty.trim(),
           company: company.trim(),
-          subcontractor: subcontractor.trim(),
+          // Matches PHWEBRESCOURCE.HTML's submit-time fallback (subcon ||
+          // "Manual") — External mode never fills this field, and OPD mode
+          // only does when a specific past visit's own contractor data is
+          // picked, so both need the same default here.
+          subcontractor: subcontractor.trim() || "Manual",
           locationId,
           diagnosis: diagnosis.trim(),
           notes,
@@ -417,7 +401,11 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
                 value={doctorName}
                 disabled={!opdFieldsReady || !locationId}
                 placeholder={
-                  !opdFieldsReady ? "Search a phone number first" : locationId ? "Search doctor…" : "Select a branch first"
+                  !opdFieldsReady
+                    ? "Search a phone number first"
+                    : locationId
+                    ? `— Search (${physicians.length} items) —`
+                    : "Select a branch first"
                 }
                 onChange={(id) => {
                   const p = physicians.find((x) => x.id === id);
