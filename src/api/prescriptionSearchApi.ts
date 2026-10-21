@@ -1,14 +1,18 @@
 const ANC_VISITS_URL =
-  "https://931476765995ec97896bdf8b57b25e.4d.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/20/workflows/82b0beb14e7e413db488a37be412bf5c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=RweUprOK5sNr92hEIs-pTGsnuARnPkpUA_arwpbZwgw";
+  "https://9ce6fb095b63e9f49185b707b4b342.5e.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/19/workflows/3ab6202e7b1848e5a401de8e8c487526/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=XjMFIcJU0zPV_gXNHO3KZfG1NrQ711KjKtFFXVXWJH8";
 const AMH_VISITS_URL =
-  "https://931476765995ec97896bdf8b57b25e.4d.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/31/workflows/b27fe5a310a241129128c3bb87053c1d/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=XKtaxi640V4qT0Cx3j8pMfIsHJ5DUJZoH0c0xROVVFk";
+  "https://9ce6fb095b63e9f49185b707b4b342.5e.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/04/workflows/9384bdd749774580adda86c617f9a285/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PgqWMZK2624IO__mJu_K0zD1L8pSvVhwugLVZ2dcL8A";
 const ANC_MEDS_URL =
-  "https://931476765995ec97896bdf8b57b25e.4d.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/15/workflows/db0756b4c06c445ab5c51aedd50ecafe/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=HgRCYGPyamk7_Ml9LwyOqfh1sMJDkdwbURk5A3YjktE";
+  "https://9ce6fb095b63e9f49185b707b4b342.5e.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/06/workflows/5ab298b66c8a4563a5c2eb299ad0bde9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=VmgRe01qMmlozvY1WWg2lT6vspa79bgQnn2_ihRkofg";
 const AMH_MEDS_URL =
-  "https://931476765995ec97896bdf8b57b25e.4d.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/02/workflows/8d14a89011314f01bf05ba2d11ff94e2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Reiu2mWYlQ8VXZIAXnxHjF1C5Q73GYCvENfsy2ol-z8";
+  "https://9ce6fb095b63e9f49185b707b4b342.5e.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/21/workflows/43b120fb0e0c46aa98c28d3606bdf84f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=oXcxHA-g_wsZB1Ws_RDzvJD7W-bWEUgZHirFeWXf91A";
 
 export interface PrescriptionVisit {
   _source: "ANC" | "AMH";
+  /** True when this row came from Dataverse (already synced), not DotCare. */
+  _local?: boolean;
+  /** crf79_visitsid — present on `_local` rows, used to load meds directly. */
+  _localId?: string;
   [key: string]: unknown;
 }
 
@@ -89,6 +93,28 @@ export async function searchPrescriptionVisits(mobile: string): Promise<Prescrip
   });
 
   return visits;
+}
+
+/**
+ * Fire-and-forget: pushes the selected visit's details to the ANC/AMH
+ * "visits" Power Automate flow so DotCare data gets synced into Dataverse.
+ * Mirrors the auto-send block in selectVisitInModal() — never awaited by the
+ * caller, so it can't delay the UI. Resolves true on HTTP 2xx.
+ */
+export async function sendVisitDetails(
+  source: "ANC" | "AMH",
+  payload: Record<string, unknown>,
+): Promise<boolean> {
+  try {
+    const resp = await fetch(source === "AMH" ? AMH_VISITS_URL : ANC_VISITS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
 }
 
 export interface PrescriptionMedsPayload {

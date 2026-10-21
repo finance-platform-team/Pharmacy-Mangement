@@ -17,16 +17,22 @@ export default function BuSelector() {
       return;
     }
     const match = units.find((u) => u.name.toLowerCase() === label.toLowerCase());
-    if (!match) return;
+    if (!match) {
+      console.warn(`[BU] "${label}" is not in the loaded business units (${units.length} loaded)`, units);
+      return;
+    }
     setBu(match.id, match.name);
     setOpen(false);
   }
 
   return (
     <div className="bu-selector">
+      <span className="bu-selector-label">
+        <Icon name="geo-alt-fill" /> Location
+      </span>
       <button className="bu-selector-btn" onClick={() => setOpen((o) => !o)}>
-        <Icon name="geo-alt" /> {selectedBuName || "Select Branch"}
-        <Icon name="chevron-down" />
+        {selectedBuName || "Select Branch"}
+        <Icon name="chevron-down" size={12} />
       </button>
 
       {open && (

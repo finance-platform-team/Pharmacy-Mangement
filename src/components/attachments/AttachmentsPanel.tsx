@@ -30,6 +30,12 @@ interface AttachmentsPanelProps {
    * messages land there. If omitted, this component shows its own toasts
    * via its own ToastStack — it never fails silently either way. */
   showToast?: (text: string, type?: "ok" | "err" | "warn") => void;
+  /**
+   * For ePrescriptions that only exist in the SQL view (no Dataverse row yet,
+   * id starts with "view:"): saves the record first and resolves with its real
+   * crf79_visitsid, so the SharePoint flow has a visit to attach to.
+   */
+  ensureSaved?: () => Promise<string>;
 }
 
 const SP_BLOCKED_HINT = "Executable/app files are not allowed for security reasons.";
@@ -51,7 +57,7 @@ function toSpAttachmentVisit(v: Visit | SpAttachmentVisit): SpAttachmentVisit {
  * but no iframe anywhere. Folder link opens in a new tab; files are
  * listed/uploaded/printed/deleted through the single SharePoint flow.
  */
-export default function AttachmentsPanel({ visit, defaultOpen = false, showToast: externalToast }: AttachmentsPanelProps) {
+export default function AttachmentsPanel({ visit, defaultOpen = false, showToast: externalToast, ensureSaved }: AttachmentsPanelProps) {
   const spVisit = toSpAttachmentVisit(visit);
   const localToast = useToast();
   const showToast = externalToast ?? localToast.showToast;
@@ -72,6 +78,11 @@ export default function AttachmentsPanel({ visit, defaultOpen = false, showToast
   const { requestPrint } = usePrint();
 
   const load = useCallback(async () => {
+    // Not saved to Dataverse yet — nothing can be attached, so nothing to list.
+    if (spVisit.id.startsWith("view:")) {
+      setFiles([]);
+      return;
+    }
     setLoading(true);
     try {
       const result = await spListFiles(spVisit);
@@ -113,9 +124,23 @@ export default function AttachmentsPanel({ visit, defaultOpen = false, showToast
     setUploadProgress({ current: 0, total: allowed.length });
     let uploaded = 0;
     try {
+      // An entry that is still only in the SQL view must be saved first.
+      let target = spVisit;
+      if (spVisit.id.startsWith("view:")) {
+        if (!ensureSaved) {
+          showToast("Save the prescription first (Take As Draft), then upload documents", "err");
+          return;
+        }
+        try {
+          target = { ...spVisit, id: await ensureSaved() };
+        } catch (e) {
+          showToast(`Could not save the prescription: ${(e as Error).message}`, "err");
+          return;
+        }
+      }
       for (const [i, file] of allowed.entries()) {
         try {
-          await spUploadFile(spVisit, file);
+          await spUploadFile(target, file);
           uploaded++;
         } catch (e) {
           showToast(`"${file.name}": ${(e as Error).message || "Upload failed"}`, "err");
@@ -332,11 +357,11 @@ export default function AttachmentsPanel({ visit, defaultOpen = false, showToast
               Delete <strong>{confirmDeleteFile.name}</strong>? This can't be undone.
             </p>
             <div className="attach-confirm-actions">
-              <Button variant="ghost" onClick={() => setConfirmDeleteFile(null)}>
-                Cancel
-              </Button>
               <Button variant="danger" icon="bi-trash" onClick={() => performDelete(confirmDeleteFile)}>
                 Delete
+              </Button>
+              <Button variant="ghost" onClick={() => setConfirmDeleteFile(null)}>
+                Cancel
               </Button>
             </div>
           </div>

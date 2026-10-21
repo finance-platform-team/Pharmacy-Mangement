@@ -101,13 +101,15 @@
 }
 
 @media (max-width: 640px) {
+  /* Centred on phones too; a tall modal scrolls inside instead of leaving the screen. */
   .modal-u-backdrop {
-    padding: 10px;
-    align-items: flex-end;
+    padding: 12px;
+    align-items: center;
   }
 
   .modal-u-dialog {
-    max-height: 92vh;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
   }
 
   .modal-u-header {
@@ -122,12 +124,30 @@
     padding: 16px;
   }
 
-  .modal-u-footer {
-    padding: 12px 16px;
-    flex-wrap: wrap;
+  /* Phones: buttons fill the width and stack, the confirm action first and
+     Close / Cancel / Go Back last. */
+  .modal-u-footer,
+  .modal-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .modal-u-footer > * {
-    flex: 1 1 auto;
+  .modal-u-footer {
+    padding: 12px 16px;
   }
+
+  .modal-u-footer > *,
+  .modal-actions > * {
+    flex: none;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Button row used inside a modal body (not the footer slot). */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
 }

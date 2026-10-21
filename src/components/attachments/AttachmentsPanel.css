@@ -183,6 +183,17 @@
   gap: 8px;
 }
 
+@media (max-width: 640px) {
+  .attach-confirm-actions {
+    flex-direction: column;
+  }
+
+  .attach-confirm-actions > * {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* ── Full-screen file preview overlay (View button) ─────────────────── */
 .attach-preview-overlay {
   position: fixed;

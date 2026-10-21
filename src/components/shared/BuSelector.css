@@ -1,22 +1,37 @@
 .bu-selector {
   position: relative;
+  display: flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--green-200);
+  background: var(--green-100);
+}
+
+.bu-selector-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--green-600);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .bu-selector-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
-  border: 1px solid var(--border-color, #ddd);
-  border-radius: 8px;
-  background: #fff;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.82rem;
   font-weight: 600;
-  font-size: 0.9rem;
+  color: var(--green-600);
   cursor: pointer;
-}
-
-.bu-selector-btn:hover {
-  border-color: var(--primary-color, #0d6efd);
 }
 
 .bu-selector-backdrop {
@@ -25,11 +40,14 @@
   z-index: 900;
 }
 
+/* Opens centred under the selector box, at least as wide as the box. */
 .bu-selector-dropdown {
   position: absolute;
   top: calc(100% + 6px);
-  right: 0;
-  min-width: 140px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: max(140px, 100%);
+  max-width: calc(100vw - 16px);
   background: #fff;
   border: 1px solid var(--border-color, #ddd);
   border-radius: 8px;
@@ -42,7 +60,7 @@
   display: block;
   width: 100%;
   padding: 10px 14px;
-  text-align: left;
+  text-align: center;
   border: none;
   background: #fff;
   cursor: pointer;

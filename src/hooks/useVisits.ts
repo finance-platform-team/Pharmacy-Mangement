@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Crf79_visitsesService } from "../generated/services/Crf79_visitsesService";
-import { Crf79_patientsesService } from "../generated/services/Crf79_patientsesService";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Crf79_visitsesService, Crf79_patientsesService } from "../api/dataverse";
 import type { Crf79_patientses } from "../generated/models/Crf79_patientsesModel";
 import { mapVisit } from "../domain/mappers";
 import { mergeVisits } from "../domain/mergeVisits";
@@ -8,6 +7,7 @@ import type { Visit } from "../domain/types";
 import { getLocalDateStr } from "../utils/format";
 import { isAnyModalOpen } from "../utils/uiBusy";
 import { useBusinessUnitContext } from "../BusinessUnitContext";
+import { useAutoRefresh } from "../AutoRefreshContext";
 
 const AUTO_REFRESH_MS = 5000;
 
@@ -87,25 +87,46 @@ async function fetchPatientsByIds(
 ): Promise<Record<string, Crf79_patientses>> {
   if (patientIds.length === 0) return {};
 
-  const filter = patientIds.map((id) => `crf79_patientsid eq ${id}`).join(" or ");
+  // One giant "id eq … or id eq …" filter for ~1000 patients makes a URL far
+  // past what the connector accepts and is a single slow request. Small
+  // chunks fired in parallel are both safe and much faster.
+  const CHUNK = 40;
+  const chunks: string[][] = [];
+  for (let i = 0; i < patientIds.length; i += CHUNK) chunks.push(patientIds.slice(i, i + CHUNK));
 
-  const result = await Crf79_patientsesService.getAll({
-    select: [
-      "crf79_patientsid",
-      "crf79_patientname",
-      "crf79_phonenumber",
-      "crf79_patientcode",
-      "crf79_company",
-      "crf79_subcontractor",
-      "crf79_adress",
-    ],
-    filter,
-  });
+  // A full load can need ~25 chunks; firing them all at once can trip the
+  // connector's throttling, so only a few run at a time.
+  const MAX_PARALLEL = 6;
+  const results: Awaited<ReturnType<typeof Crf79_patientsesService.getAll>>[] = [];
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(MAX_PARALLEL, chunks.length) }, async () => {
+      while (next < chunks.length) {
+        const ids = chunks[next++];
+        results.push(
+          await Crf79_patientsesService.getAll({
+            select: [
+              "crf79_patientsid",
+              "crf79_patientname",
+              "crf79_phonenumber",
+              "crf79_patientcode",
+              "crf79_company",
+              "crf79_subcontractor",
+              "crf79_adress",
+            ],
+            filter: ids.map((id) => `crf79_patientsid eq ${id}`).join(" or "),
+          }),
+        );
+      }
+    }),
+  );
 
   const map: Record<string, Crf79_patientses> = {};
-  (result.data ?? []).forEach((p) => {
-    map[p.crf79_patientsid] = p;
-  });
+  for (const result of results) {
+    (result.data ?? []).forEach((p) => {
+      map[p.crf79_patientsid] = p;
+    });
+  }
   return map;
 }
 
@@ -113,7 +134,14 @@ interface UseVisitsResult {
   visits: Visit[];
   loading: boolean;
   error: string | null;
+  /** Full reload with the blocking spinner (manual Refresh button). */
   reload: () => void;
+  /**
+   * Quiet delta refresh — no spinner, fetches only rows modified since the
+   * last load and merges them in. Use after an action on a single row.
+   * Resolves once the merge is done.
+   */
+  refresh: () => Promise<void>;
 }
 
 export function useVisits(): UseVisitsResult {
@@ -123,7 +151,15 @@ export function useVisits(): UseVisitsResult {
   const [reloadToken, setReloadToken] = useState(0);
   const { selectedBuId, ARC_GUID, AAC_GUID, SMH_GUID } = useBusinessUnitContext();
 
+  const { enabled: autoRefreshOn } = useAutoRefresh();
+  const autoRefreshRef = useRef(autoRefreshOn);
+  useEffect(() => {
+    autoRefreshRef.current = autoRefreshOn;
+  }, [autoRefreshOn]);
+
   const reload = useCallback(() => setReloadToken((n) => n + 1), []);
+  const refreshRef = useRef<(() => Promise<void>) | null>(null);
+  const refresh = useCallback(() => refreshRef.current?.() ?? Promise.resolve(), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -218,6 +254,12 @@ export function useVisits(): UseVisitsResult {
     // current one settles, so a slow/degraded connection can never pile up
     // overlapping requests or let an old response land after a newer one
     // and clobber fresh data with stale data.
+    // Silent refreshes (background poll + post-action refresh) run one at a
+    // time, so two overlapping delta fetches can't merge out of order.
+    let silentChain: Promise<void> = Promise.resolve();
+    const runSilent = () => (silentChain = silentChain.then(() => load(true)));
+    refreshRef.current = runSilent;
+
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     function scheduleNext() {
       if (cancelled) return;
@@ -225,8 +267,8 @@ export function useVisits(): UseVisitsResult {
         // Skip background refreshes while the tab isn't visible, or while
         // the user has a modal open (e.g. mid-edit in EditModal/ApproveModal)
         // — never disrupt what they're actively doing.
-        if (document.visibilityState === "visible" && !isAnyModalOpen()) {
-          await load(true);
+        if (autoRefreshRef.current && document.visibilityState === "visible" && !isAnyModalOpen()) {
+          await runSilent();
         }
         scheduleNext();
       }, AUTO_REFRESH_MS);
@@ -236,9 +278,10 @@ export function useVisits(): UseVisitsResult {
 
     return () => {
       cancelled = true;
+      refreshRef.current = null;
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [reloadToken, selectedBuId, ARC_GUID, AAC_GUID, SMH_GUID]);
 
-  return { visits, loading, error, reload };
+  return { visits, loading, error, reload, refresh };
 }

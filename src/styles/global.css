@@ -1,3 +1,9 @@
+/* Slightly smaller than the 16px default so every rem-based size in the app
+   (header, tabs, buttons, tables) scales down together. */
+html {
+  font-size: 14.5px;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -16,4 +22,44 @@ body {
 
 #root {
   min-height: 100vh;
+}
+
+/* Mint-green scrollbars everywhere (page, modals, tables). */
+:root {
+  --scroll-thumb: #a8e6cf;
+  --scroll-thumb-hover: #7fd4b0;
+  --scroll-track: #eef8f3;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 10px;
+  border: 2px solid var(--scroll-track);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--scroll-track);
+}
+
+/* Firefox has no ::-webkit-scrollbar; Chromium would let this override the
+   rounded styling above, so only apply it where the webkit one is missing. */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+    scrollbar-width: thin;
+  }
 }

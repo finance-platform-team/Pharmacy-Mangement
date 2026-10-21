@@ -1,0 +1,81 @@
+/* Trigger: keeps the look of whatever class it is given (fcontrol,
+   filter-inline-select, …); these rules only make a <button> behave like a field. */
+.ui-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  box-sizing: border-box;
+  text-align: left;
+  font: inherit;
+  font-family: var(--font-body);
+  color: var(--text);
+  cursor: pointer;
+  background-color: var(--white);
+}
+
+.ui-select-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.ui-select-trigger.is-placeholder .ui-select-text {
+  color: var(--text-muted);
+}
+
+.ui-select-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-select-chevron {
+  color: var(--green-500);
+  flex-shrink: 0;
+}
+
+/* .filter-inline-select already draws its own arrow as a background image. */
+.ui-select-trigger.filter-inline-select .ui-select-chevron {
+  display: none;
+}
+
+.ui-select-list {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.ui-select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ui-select-item.active,
+.ui-select-item:hover:not(:disabled) {
+  background: var(--green-100);
+}
+
+.ui-select-item.selected {
+  font-weight: 700;
+  color: var(--green-500);
+}
+
+.ui-select-item:disabled {
+  color: var(--text-muted);
+  opacity: 0.55;
+  cursor: not-allowed;
+}

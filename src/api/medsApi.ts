@@ -1,5 +1,4 @@
-import { Crf79_medicationsesService } from "../generated/services/Crf79_medicationsesService";
-import { Crf79_unavailablemedicationsService } from "../generated/services/Crf79_unavailablemedicationsService";
+import { Crf79_medicationsesService, Crf79_unavailablemedicationsService } from "./dataverse";
 import type { Visit, Medication } from "../domain/types";
 
 import { mapMedication } from "../domain/mappers";

@@ -1,0 +1,259 @@
+{
+  "name": "vrt_pamedicationol_anc",
+  "title": "PA.medicationOL_ANCS",
+  "schema": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "x-ms-dataverse-entity": true,
+      "x-ms-dataverse-entityset": "vrt_pamedicationol_ancs",
+      "x-ms-dataverse-primary-id": "vrt_pamedicationol_ancid",
+      "x-ms-dataverse-primary-name": "vrt_patientcode",
+      "properties": {
+        "vrt_administrationnotes": {
+          "type": "string",
+          "title": "AdministrationNotes",
+          "x-ms-dataverse-attribute": "vrt_administrationnotes",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_AdministrationNotes",
+          "maxLength": 500
+        },
+        "vrt_contract": {
+          "type": "string",
+          "title": "Contract",
+          "x-ms-dataverse-attribute": "vrt_contract",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_Contract",
+          "maxLength": 270
+        },
+        "vrt_contractor": {
+          "type": "string",
+          "title": "contractor",
+          "x-ms-dataverse-attribute": "vrt_contractor",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_contractor",
+          "maxLength": 250
+        },
+        "vrt_createddate": {
+          "type": "string",
+          "title": "CreatedDate",
+          "x-ms-dataverse-attribute": "vrt_createddate",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "vrt_CreatedDate"
+        },
+        "vrt_dispensingnotes": {
+          "type": "string",
+          "title": "DispensingNotes",
+          "x-ms-dataverse-attribute": "vrt_dispensingnotes",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_DispensingNotes",
+          "maxLength": 500
+        },
+        "vrt_dosageformname": {
+          "type": "string",
+          "title": "DosageFormName",
+          "x-ms-dataverse-attribute": "vrt_dosageformname",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_DosageFormName",
+          "maxLength": 250
+        },
+        "vrt_dose": {
+          "type": "string",
+          "title": "Dose",
+          "x-ms-dataverse-attribute": "vrt_dose",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_Dose",
+          "maxLength": 4000
+        },
+        "vrt_entity": {
+          "type": "string",
+          "title": "Entity",
+          "x-ms-dataverse-attribute": "vrt_entity",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_Entity",
+          "required": true,
+          "maxLength": 3
+        },
+        "vrt_externalprimarykey": {
+          "type": "string",
+          "title": "ID",
+          "x-ms-dataverse-attribute": "vrt_externalprimarykey",
+          "x-ms-dataverse-type": "DecimalType",
+          "x-ms-schema-name": "vrt_externalprimarykey",
+          "required": true
+        },
+        "vrt_financialstatus": {
+          "type": "string",
+          "title": "financialStatus",
+          "x-ms-dataverse-attribute": "vrt_financialstatus",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_financialStatus",
+          "maxLength": 50
+        },
+        "vrt_frequency": {
+          "type": "string",
+          "title": "Frequency",
+          "x-ms-dataverse-attribute": "vrt_frequency",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_Frequency",
+          "maxLength": 4000
+        },
+        "vrt_location": {
+          "type": "string",
+          "title": "location",
+          "x-ms-dataverse-attribute": "vrt_location",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_location",
+          "required": true,
+          "maxLength": 3
+        },
+        "vrt_mainspecialityenname": {
+          "type": "string",
+          "title": "MainSpecialityEnName",
+          "x-ms-dataverse-attribute": "vrt_mainspecialityenname",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_MainSpecialityEnName",
+          "maxLength": 250
+        },
+        "vrt_medication": {
+          "type": "string",
+          "title": "Medication",
+          "x-ms-dataverse-attribute": "vrt_medication",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_Medication",
+          "maxLength": 250
+        },
+        "vrt_orderlinedetailstexten": {
+          "type": "string",
+          "title": "OrderLineDetailsTextEn",
+          "x-ms-dataverse-attribute": "vrt_orderlinedetailstexten",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_OrderLineDetailsTextEn",
+          "maxLength": 4000
+        },
+        "vrt_pamedicationol_ancid": {
+          "type": "string",
+          "title": "PA.medicationOL_ANC",
+          "x-ms-dataverse-attribute": "vrt_pamedicationol_ancid",
+          "x-ms-dataverse-type": "UniqueidentifierType",
+          "x-ms-schema-name": "vrt_PAmedicationOL_ANCId",
+          "x-ms-dataverse-primary-id": true,
+          "required": true,
+          "x-ms-keyType": "primary"
+        },
+        "vrt_patientcode": {
+          "type": "string",
+          "title": "PatientCode",
+          "x-ms-dataverse-attribute": "vrt_patientcode",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vrt_PatientCode",
+          "x-ms-dataverse-primary-name": true,
+          "required": true,
+          "maxLength": 850
+        },
+        "vrt_patientenname": {
+          "type": "string",
+          "title": "PatientEnName",
+          "x-ms-dataverse-attribute": "vrt_patientenname",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_PatientEnName",
+          "maxLength": 250
+        },
+        "vrt_patientid": {
+          "type": "string",
+          "title": "PatientID",
+          "x-ms-dataverse-attribute": "vrt_patientid",
+          "x-ms-dataverse-type": "DecimalType",
+          "x-ms-schema-name": "vrt_PatientID"
+        },
+        "vrt_patientnotes": {
+          "type": "string",
+          "title": "PatientNotes",
+          "x-ms-dataverse-attribute": "vrt_patientnotes",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_PatientNotes",
+          "maxLength": 500
+        },
+        "vrt_patientphone": {
+          "type": "string",
+          "title": "PatientPhone",
+          "x-ms-dataverse-attribute": "vrt_patientphone",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_PatientPhone",
+          "maxLength": 50
+        },
+        "vrt_pgysician": {
+          "type": "string",
+          "title": "pgysician",
+          "x-ms-dataverse-attribute": "vrt_pgysician",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_pgysician",
+          "maxLength": 250
+        },
+        "vrt_price": {
+          "type": "string",
+          "title": "Price",
+          "x-ms-dataverse-attribute": "vrt_price",
+          "x-ms-dataverse-type": "DoubleType",
+          "x-ms-schema-name": "vrt_Price"
+        },
+        "vrt_routeofadministrationname": {
+          "type": "string",
+          "title": "RouteOfAdministrationName",
+          "x-ms-dataverse-attribute": "vrt_routeofadministrationname",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_RouteOfAdministrationName",
+          "maxLength": 250
+        },
+        "vrt_subclient": {
+          "type": "string",
+          "title": "subClient",
+          "x-ms-dataverse-attribute": "vrt_subclient",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_subClient",
+          "maxLength": 250
+        },
+        "vrt_tradeid": {
+          "type": "string",
+          "title": "TradeId",
+          "x-ms-dataverse-attribute": "vrt_tradeid",
+          "x-ms-dataverse-type": "DecimalType",
+          "x-ms-schema-name": "vrt_TradeId",
+          "required": true
+        },
+        "vrt_urgencynameen": {
+          "type": "string",
+          "title": "UrgencyNameEn",
+          "x-ms-dataverse-attribute": "vrt_urgencynameen",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_UrgencyNameEn",
+          "maxLength": 25
+        },
+        "vrt_visitclassification": {
+          "type": "string",
+          "title": "visitClassification",
+          "x-ms-dataverse-attribute": "vrt_visitclassification",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_visitClassification",
+          "maxLength": 50
+        },
+        "vrt_visittype": {
+          "type": "string",
+          "title": "visitType",
+          "x-ms-dataverse-attribute": "vrt_visittype",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vrt_visitType",
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "vrt_entity",
+        "vrt_externalprimarykey",
+        "vrt_location",
+        "vrt_pamedicationol_ancid",
+        "vrt_patientcode",
+        "vrt_tradeid"
+      ]
+    }
+  }
+}

@@ -95,8 +95,9 @@ export const PRESCRIPTION_TYPE_LABEL: Record<number, string> = {
   1: "ePrescription",
 };
 
+// "No Show" (0) is deliberately not offered any more; it stays an option in the
+// Dataverse option set, so old records that carry it are unaffected.
 export const CANCELLATION_REASON_LABEL: Record<number, string> = {
-  0: "No Show",
   1: "Insurance not covering Medicine",
   2: "Crowd",
   3: "Medication not available",

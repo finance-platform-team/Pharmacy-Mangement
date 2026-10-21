@@ -15,6 +15,8 @@ export interface Medication {
   discontinued: boolean;
   estPrice: number;
   details: string;
+  /** crf79_medicationkey (TradeId + branch code) — only on entries from the SQL view. */
+  key?: string;
 }
 
 // The main Visit / Claim record (crf79_visits), flattened for the UI.
@@ -56,6 +58,19 @@ export interface Visit {
   totalEstPrice: number;
 
   manual: boolean;
+  /**
+   * True when this entry came straight from the SQL view (PA.medicationOL) and
+   * has no Dataverse row yet — Draft/Cancel must create the records first.
+   * `id` is then a synthetic key, not a crf79_visitsid.
+   */
+  fromView?: boolean;
+  /** Which DotCare database the view row came from. */
+  source?: "ANC" | "AMH";
+  /**
+   * Dataverse upsert keys (value + branch code, e.g. "99920AAC") — only on
+   * entries from the SQL view: crf79_patientkey / crf79_prescriptionkey.
+   */
+  keys?: { patient: string; visit: string };
   diagnosis: string;
   notes: string;
   notesCode: number | null;

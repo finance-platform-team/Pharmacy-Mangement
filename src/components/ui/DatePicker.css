@@ -1,0 +1,130 @@
+.ui-date-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  text-align: left;
+  font: inherit;
+  font-family: var(--font-body);
+  color: var(--text);
+  background-color: var(--white);
+  cursor: pointer;
+}
+
+.ui-date-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.ui-date-trigger.is-placeholder .ui-date-text {
+  color: var(--text-muted);
+}
+
+.ui-date-text {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.ui-date {
+  padding: 8px 10px 6px;
+}
+
+.ui-date-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.ui-date-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.ui-date-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--green-500);
+  cursor: pointer;
+}
+
+.ui-date-nav:hover {
+  background: var(--green-100);
+}
+
+.ui-date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.ui-date-wd {
+  padding: 6px 0;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.ui-date-day {
+  aspect-ratio: 1;
+  min-height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.ui-date-day:hover:not(:disabled) {
+  background: var(--green-100);
+}
+
+.ui-date-day.today {
+  box-shadow: inset 0 0 0 1.5px var(--gold-500);
+}
+
+.ui-date-day.selected {
+  background: var(--green-500);
+  color: var(--white);
+  font-weight: 700;
+}
+
+.ui-date-day:disabled {
+  color: var(--text-muted);
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ui-date-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--green-200);
+}
+
+.ui-date-link {
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--green-500);
+  cursor: pointer;
+}
+
+.ui-date-link:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

@@ -1,5 +1,4 @@
-import { Crf79_visitsesService } from "../generated/services/Crf79_visitsesService";
-import { Crf79_patientsesService } from "../generated/services/Crf79_patientsesService";
+import { Crf79_visitsesService, Crf79_patientsesService } from "./dataverse";
 import { STATUS, type StatusValue } from "../domain/status";
 import type { Crf79_visitsescrf79_cancellationreason } from "../generated/models/Crf79_visitsesModel";
 import type { Visit } from "../domain/types";
@@ -133,7 +132,7 @@ export async function cancelVisit(
     crf79_status: STATUS.CANCELLED,
     statecode: 1,
     statuscode: 2,
-    // reasonCode is validated against CANCELLATION_REASON_LABEL keys (0-5)
+    // reasonCode is validated against CANCELLATION_REASON_LABEL keys (1-5)
     // before this is called, so the cast to the option-set type is safe.
     crf79_cancellationreason: reasonCode as Crf79_visitsescrf79_cancellationreason,
     crf79_waittimeinminutes: waitMinutes,

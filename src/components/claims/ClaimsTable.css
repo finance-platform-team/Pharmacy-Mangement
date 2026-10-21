@@ -60,6 +60,10 @@ table.qt th:nth-child(7) {
 table.qt th:nth-child(10) {
   width: 80px;
 }
+/* The action buttons are centred in their column, so centre the heading over them. */
+table.qt th:nth-child(11) {
+  text-align: center;
+}
 table.qt th:nth-child(12) {
   width: 48px;
 }
@@ -507,4 +511,20 @@ button.btn-edit-mobile {
     background: var(--green-200);
     color: var(--green-600);
   }
+}
+
+/* Icons: <Icon> sizes itself in em, so set the font-size on the glyph to tune it. */
+.btn-t .bi {
+  font-size: 0.82rem;
+}
+
+.btn-t.btn-print .bi {
+  font-size: 1rem;
+}
+
+.notes-icon {
+  margin-left: 5px;
+  font-size: 0.95rem;
+  color: var(--gold-500);
+  vertical-align: middle;
 }

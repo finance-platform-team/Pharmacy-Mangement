@@ -3,25 +3,36 @@ import type { Visit } from "../../domain/types";
 import Button from "../ui/Button";
 import Pagination from "../ui/Pagination";
 import Icon from "../ui/Icon";
-import { getLocalDateStr } from "../../utils/format";
+import { MIN_PHONE_DIGITS } from "../../api/medicationOlApi";
 import "./EpList.css";
 
 interface EpListProps {
   visits: Visit[];
   loading: boolean;
   busyId: string | null;
-  onRefresh: () => void;
-  onDateRangeChange: (from: string, to: string) => void;
+  /** True once a phone search has run against the SQL view. */
+  searched: boolean;
+  /** Phone of the last search — restores the box when the list is re-opened. */
+  searchedPhone: string;
+  /** Error message from the last search, if it failed. */
+  error: string | null;
+  /** Databases that were unreachable while others answered. */
+  warnings: string[];
+  /** Still searching a database (only shows the "Still searching…" note). */
+  verifying: boolean;
+  /** Waiting for the "already saved?" check — Draft/Cancel are disabled until it is done. */
+  checking: boolean;
+  /** Searches the SQL view (PA.medicationOL) by patient phone. */
+  onSearch: (phone: string) => void;
   onOpenDetail: (visit: Visit) => void;
   onGoManual: () => void;
   onOpenDraft: (visit: Visit) => void;
   onOpenCancel: (visit: Visit) => void;
-  onSearchVisits: () => void;
 }
 
 type SortDir = "asc" | "desc";
 
-const PER_PAGE = 25;
+const PER_PAGE = 15;
 
 function fmtDateTime(iso?: string): string {
   if (!iso) return "—";
@@ -39,290 +50,281 @@ export default function EpList({
   visits,
   loading,
   busyId,
-  onRefresh,
-  onDateRangeChange,
+  searched,
+  searchedPhone,
+  error,
+  warnings,
+  verifying,
+  checking,
+  onSearch,
   onOpenDetail,
   onGoManual,
   onOpenDraft,
   onOpenCancel,
-  onSearchVisits,
 }: EpListProps) {
-  const todayStr = getLocalDateStr(new Date());
-
-  const [search, setSearch] = useState("");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [phone, setPhone] = useState(searchedPhone);
+  const [phoneError, setPhoneError] = useState("");
+  const lastSearched = searchedPhone;
   const [sortDir, setSortDir] = useState<SortDir | null>(null);
   const [page, setPage] = useState(1);
 
-  function handleDateChange(from: string, to: string) {
-    setDateFrom(from);
-    setDateTo(to);
-    onDateRangeChange(from, to);
+  function runSearch() {
+    const value = phone.trim();
+    if (value.replace(/\D/g, "").length < MIN_PHONE_DIGITS) {
+      setPhoneError(`Enter at least ${MIN_PHONE_DIGITS} digits of the phone number.`);
+      return;
+    }
+    setPhoneError("");
     setPage(1);
-  }
-
-  function handleFromChange(newFrom: string) {
-    const newTo = dateTo && dateTo < newFrom ? "" : dateTo;
-    handleDateChange(newFrom, newTo);
-  }
-
-  function handleReset() {
-    setSearch("");
-    setMinPrice("");
-    setMaxPrice("");
-    setDateFrom("");
-    setDateTo("");
-    setSortDir(null);
-    onDateRangeChange("", "");
-    setPage(1);
+    onSearch(value);
   }
 
   function toggleTimeSort() {
     setSortDir((prev) => (prev === "desc" ? "asc" : "desc"));
   }
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    let list = q
-      ? visits.filter(
-          (r) =>
-            (r.patientName || "").toLowerCase().includes(q) ||
-            (r.patientPhone || "").replace(/\s/g, "").includes(q.replace(/\s/g, "")),
-        )
-      : visits.slice();
+  const sorted = useMemo(() => {
+    if (!sortDir) return visits;
+    const mult = sortDir === "desc" ? -1 : 1;
+    return [...visits].sort(
+      (a, b) =>
+        (new Date(a.orderDate || 0).getTime() - new Date(b.orderDate || 0).getTime()) * mult,
+    );
+  }, [visits, sortDir]);
 
-    const min = minPrice ? parseFloat(minPrice) : NaN;
-    const max = maxPrice ? parseFloat(maxPrice) : NaN;
-    if (!isNaN(min)) list = list.filter((r) => (r.totalEstPrice || 0) >= min);
-    if (!isNaN(max)) list = list.filter((r) => (r.totalEstPrice || 0) <= max);
-
-    if (sortDir) {
-      const mult = sortDir === "desc" ? -1 : 1;
-      list.sort((a, b) => {
-        const dA = new Date(a.orderDate || 0).getTime();
-        const dB = new Date(b.orderDate || 0).getTime();
-        return (dA - dB) * mult;
-      });
-    }
-
-    return list;
-  }, [visits, search, minPrice, maxPrice, sortDir]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PER_PAGE));
   const safePage = Math.min(page, totalPages);
   const pageItems = useMemo(() => {
     const start = (safePage - 1) * PER_PAGE;
-    return filtered.slice(start, start + PER_PAGE);
-  }, [filtered, safePage]);
+    return sorted.slice(start, start + PER_PAGE);
+  }, [sorted, safePage]);
 
   return (
     <div>
-      <div className="ep-daterange-bar">
-        <span className="ep-daterange-label">
-          <Icon name="calendar-range" /> Date Range
-        </span>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)" }}>From</label>
-          <input
-            type="date"
-            className="filter-inline-date"
-            value={dateFrom}
-            max={todayStr}
-            onChange={(e) => handleFromChange(e.target.value)}
-          />
-          <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)" }}>To</label>
-          <input
-            type="date"
-            className="filter-inline-date"
-            value={dateTo}
-            min={dateFrom || undefined}
-            max={todayStr}
-            onChange={(e) => handleDateChange(dateFrom, e.target.value)}
-          />
-          <span className="ep-daterange-label" style={{ marginLeft: 10 }}>
-            <Icon name="currency-dollar" /> Price
-          </span>
-          <div className="ep-price-range">
-            <input
-              type="number"
-              className="ep-price-input"
-              placeholder="Min"
-              min={0}
-              value={minPrice}
-              onChange={(e) => {
-                setMinPrice(e.target.value);
-                setPage(1);
-              }}
-            />
-            <span>—</span>
-            <input
-              type="number"
-              className="ep-price-input"
-              placeholder="Max"
-              min={0}
-              value={maxPrice}
-              onChange={(e) => {
-                setMaxPrice(e.target.value);
-                setPage(1);
-              }}
-            />
+      <div className="ep-search-card">
+        <div className="ep-search-card-head">
+          <div>
+            <h2 className="ep-search-title">ePrescriptions</h2>
+            <p className="ep-search-sub">
+              Type the patient&apos;s phone number — the first 8 digits are enough — then press Enter or click Search.
+            </p>
           </div>
-          <Button variant="ghost" size="sm" icon="bi-x-circle" onClick={handleReset}>
-            Reset
-          </Button>
-        </div>
-      </div>
-
-      <div className="ep-toolbar">
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <div
-            className="ep-search-wrap"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              border: "1px solid var(--gold-200, #e6dbcd)",
-              borderRadius: 8,
-              padding: "8px 12px",
-              background: "#fff",
-              flex: "1 1 220px",
-            }}
+          {/* Desktop: top-right of the card. */}
+          <Button
+            variant="primary"
+            icon="bi-plus-lg"
+            className="ep-manual-desktop"
+            onClick={onGoManual}
           >
-            <Icon name="search" size={18} style={{ flexShrink: 0, color: "var(--text-muted)" }} />
-            <input
-              type="text"
-              className="ep-search-input"
-              placeholder="Search by patient name or phone"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              style={{ border: "none", outline: "none", flex: 1, fontSize: 13, background: "transparent" }}
-            />
-          </div>
-          <Button variant="primary" icon="bi-clock-history" onClick={onSearchVisits}>
-            Search Visits
-          </Button>
-        </div>
-
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Button variant="ghost" icon="bi-arrow-clockwise" onClick={onRefresh}>
-            Refresh
-          </Button>
-          <Button variant="primary" icon="bi-plus-lg" onClick={onGoManual}>
             Manual Prescription
           </Button>
         </div>
+
+        <div className="ep-search-row">
+          <div className={`ep-search-field${phoneError ? " invalid" : ""}`}>
+            <Icon name="telephone" size={18} style={{ flexShrink: 0, color: "var(--text-muted)" }} />
+            <input
+              type="tel"
+              inputMode="tel"
+              className="ep-search-input-lg"
+              placeholder="Phone number — type at least the first 8 digits"
+              value={phone}
+              autoFocus
+              onChange={(e) => {
+                setPhone(e.target.value);
+                if (phoneError) setPhoneError("");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") runSearch();
+              }}
+            />
+          </div>
+          <div className="ep-search-actions">
+            <Button variant="primary" icon="bi-search" onClick={runSearch} loading={loading}>
+              Search
+            </Button>
+            {/* Phones / small screens: next to Search, same size. */}
+            <Button
+              variant="primary"
+              icon="bi-plus-lg"
+              className="ep-manual-mobile"
+              onClick={onGoManual}
+            >
+              Manual Prescription
+            </Button>
+          </div>
+        </div>
+        {phoneError && <p className="ep-search-error">{phoneError}</p>}
       </div>
 
-      <div className="ep-table-wrap">
-        <div style={{ overflowX: "auto" }}>
-          <table className="ep-table">
-            <thead>
-              <tr>
-                <th>Patient Phone</th>
-                <th>Patient Name</th>
-                <th>Visit ID</th>
-                <th>Physician</th>
-                <th className="sortable" onClick={toggleTimeSort}>
-                  Order Time{" "}
-                  {sortDir && <Icon name={`sort-${sortDir === "asc" ? "down" : "up-alt"}`} />}
-                </th>
-                <th>Specialty</th>
-                <th className="c">Est. Price</th>
-                <th className="c">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageItems.map((rx) => (
-                <tr
-                  key={rx.id}
-                  className={rx.manual ? "ep-row-manual" : ""}
-                  onDoubleClick={() => onOpenDetail(rx)}
-                >
-                  <td><span className="ep-phone-cell">{rx.patientPhone}</span></td>
-                  <td>{rx.patientName}</td>
-                  <td><span className="ep-visitid-badge">{rx.visitId}</span></td>
-                  <td>{rx.physician}</td>
-                  <td className="ep-time-cell">{fmtDateTime(rx.orderDate)}</td>
-                  <td><span className="ep-specialty-badge">{rx.specialty}</span></td>
-                  <td className="c">
-                    <span className="ep-price-cell">
-                      {rx.totalEstPrice ? `${rx.totalEstPrice.toLocaleString()} EGP` : "—"}
-                    </span>
-                  </td>
-                  <td className="c">
-                    <div style={{ display: "flex", gap: 7, justifyContent: "center", alignItems: "center" }}>
-                      {rx.manual && <span className="ep-source-badge">Manual</span>}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        icon="bi-eye"
-                        className="ep-row-view-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenDetail(rx);
-                        }}
-                      >
-                        View
-                      </Button>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        icon="bi-check2-circle"
-                        disabled={busyId === rx.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenDraft(rx);
-                        }}
-                      >
-                        Draft
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        icon="bi-x-circle"
-                        disabled={busyId === rx.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenCancel(rx);
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {error && (
+        <div className="ep-error-box">
+          <Icon name="exclamation-triangle" />
+          <span>Could not load prescriptions: {error}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon="bi-arrow-clockwise"
+            className="ep-retry-btn"
+            disabled={loading}
+            onClick={() => onSearch(searchedPhone)}
+          >
+            Retry
+          </Button>
         </div>
+      )}
 
-        {!loading && filtered.length === 0 && (
-          <div className="ep-empty">
-            <Icon name="inbox" />
-            <p>No ePrescriptions found</p>
-            <p>Try a different search or create a new manual prescription.</p>
+      {!error &&
+        warnings.map((w) => (
+          <div key={w} className="ep-error-box warn">
+            <Icon name="exclamation-triangle" />
+            <span>{w} Showing results from the other database only.</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="bi-arrow-clockwise"
+              className="ep-retry-btn"
+              disabled={loading}
+              onClick={() => onSearch(searchedPhone)}
+            >
+              Retry
+            </Button>
           </div>
-        )}
+        ))}
 
-        {filtered.length > 0 && (
+      {searched && !error && (
+        <p className="ep-result-count">
+          {verifying && <span className="ep-verifying">Still searching… </span>}
+          {sorted.length === 0
+            ? `No ePrescriptions found for ${lastSearched}`
+            : `${sorted.length} ePrescription${sorted.length !== 1 ? "s" : ""} found for ${lastSearched}`}
+        </p>
+      )}
+
+      {sorted.length > 0 && (
+        <div className="ep-table-wrap">
+          <div style={{ overflowX: "auto" }}>
+            <table className="ep-table rt-cards">
+              <thead>
+                <tr>
+                  <th>Patient Phone</th>
+                  <th>Patient Name</th>
+                  <th>Visit ID</th>
+                  <th>Branch</th>
+                  <th>Physician</th>
+                  <th className="sortable" onClick={toggleTimeSort}>
+                    Order Time{" "}
+                    {sortDir && <Icon name={`sort-${sortDir === "asc" ? "down" : "up-alt"}`} />}
+                  </th>
+                  <th>Specialty</th>
+                  <th className="c">Est. Price</th>
+                  <th className="c">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageItems.map((rx) => (
+                  <tr
+                    key={rx.id}
+                    className={rx.manual ? "ep-row-manual" : ""}
+                    onDoubleClick={() => onOpenDetail(rx)}
+                  >
+                    <td data-label="Phone"><span className="ep-phone-cell">{rx.patientPhone}</span></td>
+                    <td data-label="Patient">{rx.patientName}</td>
+                    <td data-label="Visit ID"><span className="ep-visitid-badge">{rx.visitId}</span></td>
+                    <td data-label="Branch">{rx.buText || "—"}</td>
+                    <td data-label="Physician">{rx.physician}</td>
+                    <td data-label="Order time" className="ep-time-cell">{fmtDateTime(rx.orderDate)}</td>
+                    <td data-label="Specialty"><span className="ep-specialty-badge">{rx.specialty}</span></td>
+                    <td className="c" data-label="Est. price">
+                      <span className="ep-price-cell">
+                        {rx.totalEstPrice ? `${rx.totalEstPrice.toLocaleString()} EGP` : "—"}
+                      </span>
+                    </td>
+                    <td className="c" data-label="">
+                      <div className="ep-actions-cell" style={{ display: "flex", gap: 7, justifyContent: "center", alignItems: "center" }}>
+                        {rx.manual && <span className="ep-source-badge">Manual</span>}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon="bi-eye"
+                          className="ep-row-view-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenDetail(rx);
+                          }}
+                        >
+                          View
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          icon="bi-check2-circle"
+                          disabled={busyId === rx.id || checking}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenDraft(rx);
+                          }}
+                        >
+                          Draft
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          icon="bi-x-circle"
+                          disabled={busyId === rx.id || checking}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenCancel(rx);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
           <Pagination
             current={safePage}
             perPage={PER_PAGE}
-            total={filtered.length}
+            total={sorted.length}
             onPageChange={setPage}
           />
-        )}
-      </div>
+        </div>
+      )}
 
-      <p className="ep-hint">
-        <Icon name="hand-index-thumb" /> Double-click any row to view full prescription details
-      </p>
+      {!searched && !loading && !error && (
+        <div className="ep-empty">
+          <Icon name="search" />
+          <p>Search for a patient</p>
+          <p>Enter the patient&apos;s phone number above to load their ePrescriptions.</p>
+        </div>
+      )}
+
+      {loading && !error && sorted.length === 0 && (
+        <div className="ep-empty">
+          <Icon name="hourglass-split" />
+          <p>Searching…</p>
+          <p>{lastSearched}</p>
+        </div>
+      )}
+
+      {searched && !loading && !error && sorted.length === 0 && (
+        <div className="ep-empty">
+          <Icon name="inbox" />
+          <p>No ePrescriptions found</p>
+          <p>Check the phone number and the selected branch, or create a manual prescription.</p>
+        </div>
+      )}
+
+      {sorted.length > 0 && (
+        <p className="ep-hint">
+          <Icon name="hand-index-thumb" /> Double-click any row to view full prescription details
+        </p>
+      )}
     </div>
   );
 }

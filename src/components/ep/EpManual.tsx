@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Button from "../ui/Button";
 import Icon from "../ui/Icon";
+import Modal from "../ui/Modal";
+import Select from "../ui/Select";
 import SearchableSelect from "../ui/SearchableSelect";
 import { createManualPrescription, waitForQueueNo } from "../../api/epApi";
 import {
@@ -56,7 +58,12 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
   const [notes, setNotes] = useState("");
   const [specialNotes, setSpecialNotes] = useState("");
   const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  /** Drops one field's error as soon as the user edits that field. */
+  const clearError = (key: string) =>
+    setErrors((prev) => (prev[key] ? { ...prev, [key]: "" } : prev));
 
   const [opdResult, setOpdResult] = useState<OpdSearchResult | null>(null);
   const [searching, setSearching] = useState(false);
@@ -177,18 +184,51 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
   }
 
   function validate(): boolean {
-    const next: Record<string, boolean> = {};
-    if (!phone.trim()) next.phone = true;
-    if (!name.trim()) next.name = true;
-    if (!locationId) next.location = true;
-    if (!company.trim()) next.company = true;
-    if (mode === "opd" && !doctorName.trim()) next.doctor = true;
+    const next: Record<string, string> = {};
+
+    const nameTrim = name.trim();
+    if (!nameTrim) next.name = "Patient name is required.";
+    else if (nameTrim.length < 3) next.name = "Patient name is too short (at least 3 characters).";
+    else if (!/^[\p{L}\p{M}][\p{L}\p{M}\s.'’-]*$/u.test(nameTrim)) {
+      next.name = "Patient name can contain letters only (no digits or symbols).";
+    }
+
+    const phoneTrim = phone.trim();
+    const phoneDigits = phoneTrim.replace(/\D/g, "");
+    if (!phoneTrim) next.phone = "Phone number is required.";
+    else if (!/^\+?[\d\s()-]+$/.test(phoneTrim)) next.phone = "Phone number can contain digits only.";
+    else if (phoneDigits.length < 8 || phoneDigits.length > 15) {
+      next.phone = "Enter a valid phone number (8 to 15 digits).";
+    }
+
+    if (!locationId) next.location = "Select a branch.";
+    if (!company.trim()) next.company = "Select a company.";
+    if (mode === "opd" && !doctorName.trim()) next.doctor = "Select a doctor.";
+
     setErrors(next);
+
+    // Take the user to the first problem.
+    if (Object.keys(next).length > 0) {
+      requestAnimationFrame(() => {
+        const el = document.querySelector<HTMLElement>(
+          ".manual-form-body input.err, .manual-form-body .ui-select-trigger.err",
+        );
+        el?.scrollIntoView({ block: "center", behavior: "smooth" });
+        el?.focus({ preventScroll: true });
+      });
+    }
     return Object.keys(next).length === 0;
   }
 
-  async function handleSubmit() {
+  // Validates, then asks the user to confirm they checked the ePrescription
+  // list and that the patient really is external, before anything is saved.
+  function handleSubmit() {
     if (!validate()) return;
+    setConfirmOpen(true);
+  }
+
+  async function doSubmit() {
+    setConfirmOpen(false);
     setSaving(true);
 
     let newVisitId: string;
@@ -214,7 +254,7 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
       );
     } catch (err) {
       console.error("Manual prescription create failed:", err);
-      setErrors({ submit: true });
+      setErrors({ submit: "Could not create the prescription." });
       setSaving(false);
       return;
     }
@@ -244,20 +284,39 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
   const opdFieldsReady = mode === "external" || searchedOpd;
 
   return (
+    <div className="ep-form-page">
+    <div className="manual-back-bar">
+      <Button variant="ghost" icon="bi-arrow-left" onClick={onCancel}>
+        Back to List
+      </Button>
+    </div>
     <div className="manual-form-card">
       <div className="manual-form-header">
         <Icon name="file-earmark-medical-fill" /> Create Manual Prescription
       </div>
 
-      <div className="manual-form-notice">
-        Only use this form if you have a <strong>handwritten claim</strong> and
-        there is <strong>no ePrescription available</strong>. If you have an
-        ePrescription or a Printed E-Claim, use the ePrescriptions screen instead.
+      <div className="manual-warning" role="alert">
+        <Icon name="exclamation-triangle-fill" />
+        <div>
+          <strong>Use this form only as a last resort.</strong>
+          <p>
+            Create a manual prescription <strong>only after you have searched the patient&apos;s
+            phone number in the ePrescriptions screen and confirmed that no prescription exists</strong>.
+            If an ePrescription or a printed E-Claim is available, use the ePrescriptions screen
+            instead. A duplicate manual entry creates a second claim for the same visit.
+          </p>
+          <ul>
+            <li>Handwritten claim with <strong>no ePrescription</strong> in the system.</li>
+            <li>
+              The <strong>External</strong> type is for patients who are genuinely external
+              (not treated at an Andalusia facility). Do not use it for an existing patient.
+            </li>
+          </ul>
+        </div>
       </div>
 
       <div className="manual-form-body">
         <div className="manual-type-toggle">
-          <Icon name="toggle2-off" />
           <div style={{ flex: 1 }}>
             <div className="manual-type-toggle-label">Prescription Type</div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -284,23 +343,26 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
 
         <div className="manual-field-grid">
           <div className="manual-field">
-            <label>Patient Name <span className="required-badge">Required</span></label>
+            <label>Patient Name <span className="req-star" aria-hidden="true">*</span></label>
             <input
               type="text"
               className={errors.name ? "err" : ""}
               placeholder={mode === "opd" ? "Search a phone number first" : "Enter patient name manually"}
               value={name}
               disabled={nameLocked || (mode === "opd" && !searchedOpd)}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                clearError("name");
+              }}
             />
             {errors.name && (
               <p className="manual-field-error">
-                <Icon name="exclamation-circle-fill" /> Patient name is required.
+                <Icon name="exclamation-circle-fill" /> {errors.name}
               </p>
             )}
           </div>
           <div className="manual-field" style={{ position: "relative" }}>
-            <label>Phone <span className="required-badge">Required</span></label>
+            <label>Phone <span className="req-star" aria-hidden="true">*</span></label>
             {mode === "opd" ? (
               <div style={{ display: "flex", gap: 8 }}>
                 <input
@@ -309,7 +371,10 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
                   placeholder="Enter phone to search…"
                   maxLength={30}
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    clearError("phone");
+                  }}
                   onKeyDown={(e) => e.key === "Enter" && handleOpdSearch()}
                 />
                 <Button variant="gold" size="sm" icon="bi-search" onClick={handleOpdSearch} loading={searching}>
@@ -323,12 +388,15 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
                 placeholder="Enter phone manually"
                 maxLength={30}
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  clearError("phone");
+                }}
               />
             )}
             {errors.phone && (
               <p className="manual-field-error">
-                <Icon name="exclamation-circle-fill" /> Phone is required.
+                <Icon name="exclamation-circle-fill" /> {errors.phone}
               </p>
             )}
 
@@ -357,20 +425,23 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
 
         <div className="manual-field-grid full">
           <div className="manual-field">
-            <label>Location / Branch <span className="required-badge">Required</span></label>
-            <select
+            <label>Location / Branch <span className="req-star" aria-hidden="true">*</span></label>
+            <Select
               className={errors.location ? "err" : ""}
               value={locationId}
-              onChange={(e) => setLocationId(e.target.value)}
-            >
-              <option value="">— Select a branch —</option>
-              {units.map((u) => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
-            </select>
+              onChange={(v) => {
+                setLocationId(v);
+                clearError("location");
+              }}
+              placeholder="— Select a branch —"
+              options={[
+                { value: "", label: "— Select a branch —" },
+                ...units.map((u) => ({ value: u.id, label: u.name })),
+              ]}
+            />
             {errors.location && (
               <p className="manual-field-error">
-                <Icon name="exclamation-circle-fill" /> Branch is required.
+                <Icon name="exclamation-circle-fill" /> {errors.location}
               </p>
             )}
           </div>
@@ -393,7 +464,7 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
 
         <div className="manual-field-grid">
           <div className="manual-field">
-            <label>Doctor Name {mode === "opd" && <span className="required-badge">Required</span>}</label>
+            <label>Doctor Name {mode === "opd" && <span className="req-star" aria-hidden="true">*</span>}</label>
             {mode === "opd" && !doctorLocked ? (
               <SearchableSelect
                 className={errors.doctor ? "err" : ""}
@@ -411,6 +482,7 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
                   const p = physicians.find((x) => x.id === id);
                   setDoctorName(p?.name || "");
                   setSpecialty(p?.specialty || "");
+                  clearError("doctor");
                 }}
               />
             ) : (
@@ -418,7 +490,7 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
             )}
             {errors.doctor && (
               <p className="manual-field-error">
-                <Icon name="exclamation-circle-fill" /> Doctor name is required.
+                <Icon name="exclamation-circle-fill" /> {errors.doctor}
               </p>
             )}
           </div>
@@ -435,7 +507,7 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
 
         <div className="manual-field-grid full">
           <div className="manual-field">
-            <label>Company <span className="required-badge">Required</span></label>
+            <label>Company <span className="req-star" aria-hidden="true">*</span></label>
             {companyLocked ? (
               <input type="text" className={errors.company ? "err" : ""} value={company} disabled />
             ) : (
@@ -451,12 +523,15 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
                     ? `Search (${companies.length} items)…`
                     : "Search companies…"
                 }
-                onChange={(_id, label) => setCompany(label)}
+                onChange={(_id, label) => {
+                  setCompany(label);
+                  clearError("company");
+                }}
               />
             )}
             {errors.company && (
               <p className="manual-field-error">
-                <Icon name="exclamation-circle-fill" /> Company is required.
+                <Icon name="exclamation-circle-fill" /> {errors.company}
               </p>
             )}
           </div>
@@ -500,6 +575,15 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
           </div>
         </div>
 
+        <div className="manual-warning inline" role="note">
+          <Icon name="info-circle-fill" />
+          <p>
+            {mode === "external"
+              ? "External: select this only if you have verified the patient is truly external. If the patient has an Andalusia visit, find the ePrescription instead."
+              : "OPD Search: select this only if the OPD visit has no ePrescription. Search the ePrescriptions screen by the patient's phone number first."}
+          </p>
+        </div>
+
         {errors.submit && (
           <p className="manual-field-error">
             <Icon name="exclamation-circle-fill" /> Could not create prescription. Please try again.
@@ -515,6 +599,41 @@ export default function EpManual({ userId, showToast, onCancel, onCreated }: EpM
           Submit Manual Prescription
         </Button>
       </div>
+
+      <Modal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title="Confirm manual prescription"
+        icon="bi-exclamation-triangle"
+        footer={
+          <>
+            <Button variant="gold" icon="bi-check-lg" onClick={doSubmit}>
+              Yes, I have verified — Submit
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirmOpen(false)}>
+              Go Back
+            </Button>
+          </>
+        }
+      >
+        <p style={{ marginTop: 0, fontWeight: 600 }}>Before you submit, please confirm that:</p>
+        <ul className="manual-confirm-list">
+          <li>
+            You searched <strong>{phone.trim() || "the patient"}</strong> in the ePrescriptions
+            screen and <strong>no prescription exists</strong> for this visit.
+          </li>
+          {mode === "external" && (
+            <li>
+              <strong>{name.trim() || "The patient"}</strong> is <strong>genuinely an external
+              patient</strong> and not an existing Andalusia patient.
+            </li>
+          )}
+        </ul>
+        <p style={{ marginBottom: 0, color: "var(--text-muted)", fontSize: 13 }}>
+          Submitting a duplicate creates a second claim for the same visit.
+        </p>
+      </Modal>
+    </div>
     </div>
   );
 }

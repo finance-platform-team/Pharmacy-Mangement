@@ -1,14 +1,22 @@
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import Icon from "../ui/Icon";
 import {
   searchPrescriptionVisits,
   fetchPrescriptionMeds,
+  sendVisitDetails,
   getProp,
   type PrescriptionVisit,
   type PrescriptionMed,
 } from "../../api/prescriptionSearchApi";
+import {
+  searchLocalVisits,
+  fetchVisitMedsFromDataverse,
+  pollVisitMeds,
+  type PollSignal,
+} from "../../api/pvDataverse";
+import { useBusinessUnitContext } from "../../BusinessUnitContext";
 import "./GetPatientPrescriptionModal.css";
 
 interface GetPatientPrescriptionModalProps {
@@ -16,10 +24,53 @@ interface GetPatientPrescriptionModalProps {
   onClose: () => void;
 }
 
+const visitIdOf = (v: PrescriptionVisit): string =>
+  getProp(v, ["VisitID", "visitId", "visitid", "Visit_ID", "ID", "id"]);
+
+const datetimeOf = (v: PrescriptionVisit): string =>
+  getProp(v, ["datetime", "DateTime", "date", "Date", "visitcreateddate", "createdon"]);
+
+/**
+ * Merges already-saved (local) visits with the ones DotCare returned,
+ * de-duped by VisitID — the local copy wins, since it carries the
+ * `_local`/`_localId` markers needed for the fast "no re-fetch" path.
+ * Mirrors the mergedVisits logic in runPVSearchFromModal().
+ */
+function mergeVisitLists(
+  local: PrescriptionVisit[],
+  remote: PrescriptionVisit[],
+): PrescriptionVisit[] {
+  const seen = new Set<string>();
+  const merged: PrescriptionVisit[] = [];
+  local.forEach((v) => {
+    const id = String(visitIdOf(v) || "");
+    if (id) seen.add(id);
+    merged.push(v);
+  });
+  remote.forEach((v) => {
+    const id = String(visitIdOf(v) || "");
+    if (id && seen.has(id)) return;
+    merged.push(v);
+  });
+  merged.sort(
+    (a, b) => new Date(datetimeOf(b) || 0).getTime() - new Date(datetimeOf(a) || 0).getTime(),
+  );
+  return merged;
+}
+
 export default function GetPatientPrescriptionModal({
   open,
   onClose,
 }: GetPatientPrescriptionModalProps) {
+  const { units } = useBusinessUnitContext();
+  const branchLabelById = useMemo(() => {
+    const map: Record<string, string> = {};
+    units.forEach((u) => {
+      map[u.id] = u.name;
+    });
+    return map;
+  }, [units]);
+
   const [mobile, setMobile] = useState("");
   const [searching, setSearching] = useState(false);
   const [visits, setVisits] = useState<PrescriptionVisit[] | null>(null);
@@ -27,7 +78,16 @@ export default function GetPatientPrescriptionModal({
   const [loadingMeds, setLoadingMeds] = useState(false);
   const [meds, setMeds] = useState<PrescriptionMed[] | null>(null);
 
+  // Aborts any in-flight meds poll when the user re-selects or closes.
+  const pollAbortRef = useRef<PollSignal | null>(null);
+
+  function abortPoll() {
+    if (pollAbortRef.current) pollAbortRef.current.aborted = true;
+    pollAbortRef.current = null;
+  }
+
   function handleClose() {
+    abortPoll();
     setMobile("");
     setVisits(null);
     setSelectedIndex(null);
@@ -37,42 +97,76 @@ export default function GetPatientPrescriptionModal({
 
   async function handleSearch() {
     if (!mobile.trim()) return;
+    abortPoll();
     setSearching(true);
     setVisits(null);
     setSelectedIndex(null);
     setMeds(null);
     try {
-      const result = await searchPrescriptionVisits(mobile.trim());
-      setVisits(result);
+      // Check Dataverse first (fast, no external call) AND DotCare in
+      // parallel, then merge — a saved visit shows instantly, DotCare still
+      // refreshes stale data and surfaces any brand-new visits.
+      const [local, remote] = await Promise.all([
+        searchLocalVisits(mobile.trim(), branchLabelById),
+        searchPrescriptionVisits(mobile.trim()).catch(() => [] as PrescriptionVisit[]),
+      ]);
+      setVisits(mergeVisitLists(local, remote));
     } finally {
       setSearching(false);
     }
   }
 
+  function buildPayload(v: PrescriptionVisit) {
+    return {
+      visitId: Number(visitIdOf(v)) || 0,
+      patientName: getProp(v, ["PatientName", "patientname"]),
+      patientCode: getProp(v, ["PatientCode", "patientcode"]),
+      mobile,
+      doctor: getProp(v, ["Doctor", "doctor", "DoctorName"]) || null,
+      specialty: getProp(v, ["MainSpecialityEnName", "specialty", "Specialty"]) || null,
+      contractor: getProp(v, ["contractor", "Contractor", "company"]),
+      contractorClient: getProp(v, ["contractorclient", "subcontractor"]),
+      diagnose: getProp(v, ["diagnose", "diagnosis"]) || null,
+      datetime: datetimeOf(v),
+    };
+  }
+
   async function handleSelectVisit(index: number) {
+    abortPoll();
     setSelectedIndex(index);
     setMeds(null);
     const v = visits?.[index];
     if (!v) return;
 
+    const signal: PollSignal = { aborted: false };
+    pollAbortRef.current = signal;
+
     setLoadingMeds(true);
     try {
-      const result = await fetchPrescriptionMeds(v._source, {
-        visitId: Number(getProp(v, ["VisitID", "visitId", "visitid"])) || 0,
-        patientName: getProp(v, ["PatientName", "patientname"]),
-        patientCode: getProp(v, ["PatientCode", "patientcode"]),
-        mobile,
-        doctor: getProp(v, ["Doctor", "doctor", "DoctorName"]) || null,
-        specialty: getProp(v, ["MainSpecialityEnName", "specialty", "Specialty"]) || null,
-        contractor: getProp(v, ["contractor", "Contractor", "company"]),
-        contractorClient: getProp(v, ["contractorclient", "subcontractor"]),
-        diagnose: getProp(v, ["diagnose", "diagnosis"]) || null,
-        datetime: getProp(v, ["datetime", "DateTime", "date"]),
-      });
+      const payload = buildPayload(v);
+      const vid = payload.visitId;
+
+      // Already-saved visit → load meds straight from Dataverse, no fetch.
+      let result: PrescriptionMed[] =
+        v._local && v._localId ? await fetchVisitMedsFromDataverse(v._localId) : [];
+
+      if (!result.length) {
+        // Not saved yet (or saved with no meds): trigger the fetch flow —
+        // it pulls from DotCare and saves into Dataverse, responding only
+        // {status:success} — then poll Dataverse for what it saved.
+        await fetchPrescriptionMeds(v._source, payload).catch(() => [] as PrescriptionMed[]);
+        if (signal.aborted) return;
+        result = await pollVisitMeds(vid, { signal });
+      }
+
+      if (signal.aborted) return;
       setMeds(result);
     } finally {
-      setLoadingMeds(false);
+      if (!signal.aborted) setLoadingMeds(false);
     }
+
+    // Fire-and-forget: sync this visit's details to the ANC/AMH flow.
+    if (!v._local) void sendVisitDetails(v._source, buildPayload(v));
   }
 
   const selectedVisit = selectedIndex != null ? visits?.[selectedIndex] : null;
@@ -131,7 +225,7 @@ export default function GetPatientPrescriptionModal({
               </thead>
               <tbody>
                 {visits.map((v, i) => {
-                  const dtVal = getProp(v, ["datetime", "DateTime", "date", "Date"]);
+                  const dtVal = datetimeOf(v);
                   return (
                     <tr
                       key={i}
@@ -142,12 +236,13 @@ export default function GetPatientPrescriptionModal({
                       <td>{getProp(v, ["PatientName", "patientname"]) || "—"}</td>
                       <td>{getProp(v, ["Doctor", "doctor", "DoctorName"]) || "—"}</td>
                       <td>{getProp(v, ["MainSpecialityEnName", "specialty", "Specialty"]) || "—"}</td>
-                      <td>{getProp(v, ["VisitID", "visitId", "visitid"]) || "—"}</td>
+                      <td>{visitIdOf(v) || "—"}</td>
                       <td>{getProp(v, ["contractor", "Contractor", "company"]) || "—"}</td>
                       <td>
                         <span className={`pv-source-badge ${v._source.toLowerCase()}`}>
                           {v._source}
                         </span>
+                        {v._local && <span className="pv-saved-tag"> ✓ Saved</span>}
                       </td>
                     </tr>
                   );
@@ -176,14 +271,14 @@ export default function GetPatientPrescriptionModal({
             <label>Date</label>
             <span>
               {(() => {
-                const dt = getProp(selectedVisit, ["datetime", "DateTime", "date", "Date"]);
+                const dt = datetimeOf(selectedVisit);
                 return dt ? new Date(dt).toLocaleString("en-GB") : "—";
               })()}
             </span>
           </div>
           <div className="pv-detail-box">
             <label>Visit ID</label>
-            <span>{getProp(selectedVisit, ["VisitID", "visitId", "visitid"]) || "—"}</span>
+            <span>{visitIdOf(selectedVisit) || "—"}</span>
           </div>
           <div className="pv-detail-box">
             <label>Company</label>
@@ -205,7 +300,11 @@ export default function GetPatientPrescriptionModal({
           {loadingMeds && (
             <div className="pv-status-box">
               <Icon name="hourglass-split" />
-              <p>Fetching prescription from DotCare…</p>
+              <p>
+                {selectedVisit._local
+                  ? "Loading saved medications…"
+                  : "Fetching prescription from DotCare…"}
+              </p>
             </div>
           )}
 

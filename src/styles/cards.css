@@ -1,0 +1,301 @@
+/*
+ * Phone / small-tablet layout for data tables.
+ *
+ * Every <table class="rt-cards"> becomes a stack of cards. A card is a 12-column
+ * grid, so every field sits on the same lines in every card:
+ *
+ *   ┌───────────────────────────────┐
+ *   │ header   (ids · status · tools)│
+ *   │ title    (patient name)        │
+ *   │ details  (label above value)   │
+ *   │ actions  (equal-width buttons) │
+ *   └───────────────────────────────┘
+ *
+ * Each <td data-label="…"> is one labelled field (an empty data-label hides the
+ * label). Placement per table is spelled out below — nothing is left to
+ * auto-flow. Desktop layouts are untouched.
+ */
+@media (max-width: 900px) {
+  .table-scroll,
+  .ep-table-wrap > div {
+    overflow-x: visible !important;
+  }
+
+  .queue-wrapper,
+  .ep-table-wrap,
+  .table-scroll {
+    max-width: 100%;
+  }
+
+  table.rt-cards,
+  table.rt-cards tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  table.rt-cards thead {
+    display: none;
+  }
+
+  table.rt-cards tbody {
+    padding: 12px;
+  }
+
+  /* ── Card shell: 12-column grid ─────────────────────────────────── */
+  table.rt-cards tbody tr {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 8px;
+    row-gap: 12px;
+    align-items: start;
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 14px;
+    margin: 0 0 12px;
+    border: 1px solid var(--green-200);
+    border-radius: 14px;
+    background: var(--white);
+    box-shadow: var(--shadow-sm);
+  }
+
+  table.rt-cards tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ── Field: small caption on top, value below ───────────────────── */
+  table.rt-cards td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    grid-column: span 6;
+    min-width: 0;
+    padding: 0 !important;
+    border: 0 !important;
+    text-align: left !important;
+    font-size: 0.86rem !important;
+    line-height: 1.35;
+  }
+
+  table.rt-cards td::before {
+    content: attr(data-label);
+    font-family: var(--font-head);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  table.rt-cards td[data-label=""]::before {
+    display: none;
+  }
+
+  /* Long names / numbers wrap inside the card instead of poking out. */
+  table.rt-cards td,
+  table.rt-cards td * {
+    max-width: 100%;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  table.rt-cards td button,
+  table.rt-cards td .btn-t,
+  table.rt-cards td .btn-u {
+    white-space: nowrap !important;
+  }
+}
+
+/* ══ Insurance claims queue — table.qt ═══════════════════════════════════
+   header : status badge ........................ print
+   title  : patient name
+   details: phone | queue · specialty | wait · worked by (full) ·
+            availability | attended · delivery / chronic (full)
+   actions: 2-column button grid                                              */
+@media (max-width: 900px) {
+  /* header strip: no captions, just the badge and the print button */
+  table.qt td:nth-child(3)::before,
+  table.qt td:nth-child(12)::before,
+  table.qt td:nth-child(4)::before,
+  table.qt td:nth-child(11)::before {
+    display: none;
+  }
+
+  table.qt td:nth-child(3) {                      /* status badge */
+    order: 1;
+    grid-column: span 8;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  table.qt td:nth-child(12) {                     /* print */
+    order: 2;
+    grid-column: span 4;
+    align-items: flex-end;
+  }
+
+  /* title */
+  table.qt td:nth-child(4) {                      /* patient name */
+    order: 3;
+    grid-column: 1 / -1;
+    font-size: 1.02rem !important;
+    font-weight: 700;
+  }
+
+  /* details — labelled, two per line */
+  table.qt td:nth-child(5) { order: 4; }          /* phone */
+  table.qt td:nth-child(2) { order: 5; }          /* queue # */
+  table.qt td:nth-child(7) { order: 6; }          /* specialty */
+  table.qt td:nth-child(6) { order: 7; }          /* wait time */
+  table.qt td:nth-child(9) { order: 8; grid-column: 1 / -1; }   /* worked by */
+  table.qt td:nth-child(10) { order: 9; }         /* availability */
+  table.qt td:nth-child(1) { order: 10; }         /* attended */
+
+  table.qt .wcell {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  table.qt td:nth-child(8) {                      /* delivery / chronic */
+    order: 11;
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+
+  table.qt td:nth-child(8)::before {
+    flex-basis: 100%;
+  }
+
+  table.qt .tag {
+    margin: 0;
+  }
+
+  /* actions */
+  table.qt td:nth-child(11) {
+    order: 12;
+    grid-column: 1 / -1;
+    padding-top: 12px !important;
+    border-top: 1px dashed var(--green-200) !important;
+  }
+
+  table.qt td:nth-child(11)::before {
+    display: none;
+  }
+
+  table.qt .actions-cell {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  table.qt .actions-cell .btn-t {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 40px;
+    margin: 0;
+    padding: 8px 10px;
+    font-size: 0.74rem;
+  }
+
+  /* Touch screens can't double-click a row — View / Edit is always there, full width. */
+  table.qt button.btn-edit-mobile {
+    display: inline-flex !important;
+    grid-column: 1 / -1;
+    background: var(--green-200);
+    color: var(--green-600);
+  }
+}
+
+/* ══ ePrescriptions — table.ep-table ═════════════════════════════════════
+   header : patient name · est. price
+   details: phone | visit id · physician | specialty · order time | branch
+   actions: View · Draft · Cancel (equal width)                              */
+@media (max-width: 900px) {
+  table.ep-table td:nth-child(2) {                 /* patient name */
+    order: 1;
+    grid-column: span 8;
+    font-size: 1.02rem !important;
+    font-weight: 700;
+  }
+
+  table.ep-table td:nth-child(2)::before {
+    display: none;
+  }
+
+  table.ep-table td:nth-child(8) {                 /* est. price */
+    order: 2;
+    grid-column: span 4;
+    align-items: flex-end;
+    text-align: right !important;
+  }
+
+  table.ep-table td:nth-child(1) { order: 3; }     /* phone */
+  table.ep-table td:nth-child(3) { order: 4; }     /* visit id */
+  table.ep-table td:nth-child(5) { order: 5; }     /* physician */
+  table.ep-table td:nth-child(7) { order: 6; }     /* specialty */
+  table.ep-table td:nth-child(6) { order: 7; }     /* order time */
+  table.ep-table td:nth-child(4) { order: 8; }     /* branch */
+
+  table.ep-table td:last-child {                   /* actions */
+    order: 9;
+    grid-column: 1 / -1;
+    padding-top: 12px !important;
+    border-top: 1px dashed var(--green-200) !important;
+  }
+
+  table.ep-table .ep-actions-cell {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px !important;
+    width: 100%;
+  }
+
+  table.ep-table .ep-actions-cell .ep-source-badge {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  table.ep-table .ep-actions-cell .btn-u {
+    width: 100%;
+    min-height: 40px;
+    justify-content: center;
+  }
+}
+
+/* ── Laptop / small desktop: keep the ePrescriptions table inside its card ── */
+@media (min-width: 901px) and (max-width: 1400px) {
+  table.ep-table th,
+  table.ep-table td {
+    padding: 12px 9px;
+  }
+
+  table.ep-table th {
+    letter-spacing: 0.05em;
+  }
+
+  table.ep-table td:nth-child(2),
+  table.ep-table td:nth-child(5) {
+    min-width: 120px;
+  }
+
+  table.ep-table .ep-actions-cell {
+    flex-wrap: wrap;
+  }
+}
+
+/* A lone last action button (odd count) spans the full row instead of leaving a gap. */
+@media (max-width: 900px) {
+  table.qt .actions-cell > .btn-t:last-child:nth-child(even) {
+    grid-column: 1 / -1;
+  }
+}

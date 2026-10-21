@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { BusinessunitsService } from "../generated/services/BusinessunitsService";
+import { BusinessunitsService } from "../api/dataverse";
 
 export interface BusinessUnit {
   id: string;
@@ -55,11 +55,14 @@ export function useBusinessUnit(): UseBusinessUnitResult {
           filter,
         });
         if (cancelled) return;
+        if (!result.success) console.error("[BU] business units query failed", result.error);
         const list = (result.data ?? []).map((bu) => ({
           id: bu.businessunitid,
           name: bu.name,
         }));
         setUnits(list);
+      } catch (err) {
+        console.error("[BU] business units query threw", err);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -78,16 +81,25 @@ export function useBusinessUnit(): UseBusinessUnitResult {
     setSelectedBuName(name);
   }, []);
 
+  // The id kept in localStorage belongs to whichever environment it was saved
+  // in (business unit ids differ between environments). The branch NAME is the
+  // stable part, so take the id from the units loaded from the current
+  // environment; until they load (or if the name is unknown) keep the stored id.
+  const resolvedBuId =
+    !selectedBuId || selectedBuId === "ALL"
+      ? selectedBuId
+      : (units.find((u) => u.name.toLowerCase() === selectedBuName.toLowerCase())?.id ?? selectedBuId);
+
   const findGuid = (name: string): string | null =>
     units.find((u) => u.name.toLowerCase() === name.toLowerCase())?.id ?? null;
 
   return {
     units,
     loading,
-    selectedBuId,
+    selectedBuId: resolvedBuId,
     selectedBuName,
     setBu,
-    hasSelectedBu: selectedBuId !== "",
+    hasSelectedBu: resolvedBuId !== "",
     ARC_GUID: findGuid("ARC"),
     AAC_GUID: findGuid("AAC"),
     SMH_GUID: findGuid("SMH"),

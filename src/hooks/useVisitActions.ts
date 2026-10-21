@@ -17,19 +17,19 @@ import type { StatusValue } from "../domain/status";
 
 interface UseVisitActionsOptions {
   showToast: (text: string, type?: ToastType) => void;
-  reload: () => void;
+  /** Quiet delta refresh of the list — resolves once the changed row is merged in. */
+  refresh: () => Promise<void>;
 }
 
 /**
  * Wires the workflow buttons (Attend/Pending/Approve/Dispense/ChangeStage/
  * Cancel) to the Dataverse update calls in api/visitsApi.ts. Mirrors the
  * old doAttend/doPending/doApprove/doDispense/doChangeStage/doCancel
- * functions, but without the optimistic local-state mutation they used —
- * after a successful update we just reload() the full list. Slightly
- * slower UX than the old version, acceptable trade-off for now; can
- * revisit in Phase 11.
+ * functions. After a successful update it runs a quiet delta refresh (only
+ * rows modified since the last load, no blocking spinner) instead of
+ * re-fetching the whole list; the row stays marked busy until that lands.
  */
-export function useVisitActions({ showToast, reload }: UseVisitActionsOptions) {
+export function useVisitActions({ showToast, refresh }: UseVisitActionsOptions) {
   const { systemUserId } = useCurrentUser();
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -38,7 +38,7 @@ export function useVisitActions({ showToast, reload }: UseVisitActionsOptions) {
     try {
       await action();
       showToast(`${label} ✓`, "ok");
-      reload();
+      await refresh();
     } catch (err) {
       showToast(`${label} failed: ${String(err)}`, "err");
     } finally {

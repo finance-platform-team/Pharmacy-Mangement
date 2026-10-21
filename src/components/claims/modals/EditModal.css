@@ -167,6 +167,12 @@
 
   .edit-body-row {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .edit-main-col {
+    flex: 0 0 auto;
+    width: 100%;
   }
 
   .edit-side-col {
@@ -186,5 +192,46 @@
 
   .edit-sticky-footer > * {
     flex: 1 1 auto;
+  }
+}
+
+/* Footer: Save on the left, Print in the middle, Close on the right.
+   Three equal columns, every button fills its column (same width), and each has
+   its own fixed slot, so a missing button leaves a gap instead of shifting the others. */
+.edit-sticky-footer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 10px;
+}
+
+.edit-sticky-footer .btn-u {
+  width: 100%;
+  justify-content: center;
+}
+
+.edit-sticky-footer .ef-save {
+  grid-column: 1;
+}
+
+.edit-sticky-footer .ef-print {
+  grid-column: 2;
+}
+
+.edit-sticky-footer .ef-close {
+  grid-column: 3;
+}
+
+/* Phones: full-width buttons, one under the other — Save, Print, Close. */
+@media (max-width: 640px) {
+  .edit-sticky-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .edit-sticky-footer .btn-u {
+    flex: none;
+    width: 100%;
   }
 }

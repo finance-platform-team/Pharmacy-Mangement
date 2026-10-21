@@ -51,12 +51,12 @@ export default function ApproveModal({ open, visit, onClose, onConfirm, busy }: 
 
       <AttachmentsPanel visit={visit} />
 
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 18 }}>
-        <Button variant="ghost" onClick={onClose} disabled={busy}>
-          Cancel
-        </Button>
+      <div className="modal-actions">
         <Button variant="primary" icon="bi-check-circle" onClick={onConfirm} loading={busy}>
           Confirm Approve
+        </Button>
+        <Button variant="ghost" onClick={onClose} disabled={busy}>
+          Cancel
         </Button>
       </div>
     </Modal>

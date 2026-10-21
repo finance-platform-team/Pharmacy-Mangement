@@ -129,7 +129,7 @@ export default function ClaimRow({
 
   return (
     <tr className={rowClasses} onDoubleClick={() => onOpenEdit(c)} style={{ cursor: "pointer" }}>
-      <td className="c">
+      <td className="c" data-label="Attended">
         <input
           type="checkbox"
           className="attended-cb"
@@ -139,21 +139,21 @@ export default function ClaimRow({
           style={{ cursor: canAttend ? "pointer" : "not-allowed" }}
         />
       </td>
-      <td>
+      <td data-label="Queue #">
         <span className="qnum" title={displayQ}>{displayQ}</span>
       </td>
-      <td>
+      <td data-label="Status">
         <span className={`sbadge s-${c.status.toLowerCase()}`}>{c.status}</span>
       </td>
-      <td>
+      <td data-label="Patient">
         <span className="pname">{c.patientName}</span>
       </td>
-      <td className="phone-cell">
+      <td className="phone-cell" data-label="Phone">
         <a href={`tel:${c.patientPhone}`}>{c.patientPhone}</a>
       </td>
-      <td className="c">{waitContent}</td>
-      <td>{c.specialty}</td>
-      <td>
+      <td className="c" data-label="Wait time">{waitContent}</td>
+      <td data-label="Specialty">{c.specialty}</td>
+      <td data-label="Delivery / Chronic">
         <span className={`tag ${c.deliveryCode === 1 ? "tag-pick" : "tag-del"}`}>
           {c.deliveryStatus || "—"}
         </span>{" "}
@@ -165,13 +165,13 @@ export default function ClaimRow({
           <Icon name="journal-text" className="notes-icon" title="Special Notes" />
         )}
       </td>
-      <td>
+      <td data-label="Worked by">
         <div className="wcell">
           <span className="wavatar">{initialsOf(c.worker)}</span>
           {c.worker || "—"}
         </div>
       </td>
-      <td className="c">
+      <td className="c" data-label="Availability">
         {!c.manual && (
           <button
             type="button"
@@ -189,7 +189,7 @@ export default function ClaimRow({
           </span>
         )}
       </td>
-      <td>
+      <td data-label="Actions">
         <div className="actions-cell">
           <button
             type="button"
@@ -262,7 +262,7 @@ export default function ClaimRow({
           )}
         </div>
       </td>
-      <td className="c">
+      <td className="c" data-label="Print">
         <button
           type="button"
           className="btn-t btn-print"

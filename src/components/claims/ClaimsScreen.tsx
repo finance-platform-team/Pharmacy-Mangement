@@ -20,17 +20,16 @@ import type { Visit } from "../../domain/types";
 import { saveUnavailableMedications } from "../../api/medsApi";
 import { getLogicalDateStr } from "../../utils/format";
 import type { SortState } from "../../domain/filters";
-import GetPatientPrescriptionModal from "../shared/GetPatientPrescriptionModal";
 import ApproveModal from "./modals/ApproveModal";
 
 const PER_PAGE = 20;
 
 export default function ClaimsScreen() {
   const { systemUserId } = useCurrentUser();
-  const { visits, loading, error, reload } = useVisits();
+  const { visits, loading, error, reload, refresh } = useVisits();
   const { toasts, showToast } = useToast();
   const { attend, pending, approve, preparing, dispense, changeStage, cancel, busyId } =
-    useVisitActions({ showToast, reload });
+    useVisitActions({ showToast, refresh });
 
   const [stageModalVisit, setStageModalVisit] = useState<Visit | null>(null);
 
@@ -43,7 +42,6 @@ export default function ClaimsScreen() {
 
   const [availModalVisit, setAvailModalVisit] = useState<Visit | null>(null);
   const [sort, setSort] = useState<SortState | undefined>(undefined);
-  const [pvModalOpen, setPvModalOpen] = useState(false);
   const [approveModalVisit, setApproveModalVisit] = useState<Visit | null>(null);
 
 function handleApproveConfirm() {
@@ -69,7 +67,7 @@ function handleApproveConfirm() {
     if (!visit.attended) {
       attend(visit);
     } else {
-      reload();
+      refresh();
     }
   }
 
@@ -77,7 +75,7 @@ function handleApproveConfirm() {
 
   function handleEditSaved() {
     setEditModalVisit(null);
-    reload();
+    refresh();
   }
 
   const [cancelModalVisit, setCancelModalVisit] = useState<Visit | null>(null);
@@ -143,8 +141,6 @@ function handleApproveConfirm() {
         filters={filters}
         onFiltersChange={handleFiltersChange}
         onRefresh={reload}
-                onSearchVisits={() => setPvModalOpen(true)}
-
       />
 
       <FilterChips
@@ -154,10 +150,6 @@ function handleApproveConfirm() {
         onFiltersChange={handleFiltersChange}
       />
 
-<GetPatientPrescriptionModal
-        open={pvModalOpen}
-        onClose={() => setPvModalOpen(false)}
-      />
       <ClaimsTable
         claims={pageVisits}
         busyId={busyId}

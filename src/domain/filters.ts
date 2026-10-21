@@ -41,6 +41,16 @@ function normalizeId(id: unknown): string {
 }
 
 /**
+ * A visit cancelled with the "No Show" reason (cancellation reason 0). These are
+ * never listed. They are hidden here at display time rather than dropped when
+ * loading, so a visit that turns into a No Show after it was shown still gets
+ * updated by the delta refresh instead of lingering with its old status.
+ */
+export function isNoShow(v: Pick<Visit, "status" | "cancelReason">): boolean {
+  return v.status === "Cancelled" && v.cancelReason != null && Number(v.cancelReason) === 0;
+}
+
+/**
  * Filters, searches, and sorts the claims/visits list.
  * This is a pure function - all inputs (filters, search text, sort,
  * selected business unit) are passed in explicitly instead of being
@@ -58,7 +68,7 @@ export function applyFilters(
   const { filters = {}, search = "", businessUnitId = "", sort } = options;
   const query = search.toLowerCase().trim();
 
-  let list = visits.slice();
+  let list = visits.filter((v) => !isNoShow(v));
 
   if (filters.status) {
     list = list.filter((v) => v.status === filters.status);

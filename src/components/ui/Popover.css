@@ -1,0 +1,12 @@
+.ui-pop {
+  position: fixed;
+  z-index: 3000;
+  box-sizing: border-box;
+  overflow-y: auto;
+  background: var(--white, #fff);
+  border: 1px solid var(--green-200, #d0dece);
+  border-radius: var(--radius-sm, 8px);
+  box-shadow: var(--shadow-lg, 0 12px 40px rgba(46, 55, 45, 0.15));
+  font-family: var(--font-body, sans-serif);
+  -webkit-overflow-scrolling: touch;
+}

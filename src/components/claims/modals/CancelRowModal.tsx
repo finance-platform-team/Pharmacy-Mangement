@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Modal from "../../ui/Modal";
 import Button from "../../ui/Button";
+import Select from "../../ui/Select";
 import type { Visit } from "../../../domain/types";
 import { CANCELLATION_REASON_LABEL } from "../../../domain/status";
 
@@ -46,11 +47,11 @@ function handleConfirm() {
       icon="bi-x-circle"
       footer={
         <>
-          <Button variant="ghost" onClick={handleClose}>
-            Go Back
-          </Button>
           <Button variant="danger" icon="bi-x-lg" onClick={handleConfirm}>
             Confirm Cancel
+          </Button>
+          <Button variant="ghost" onClick={handleClose}>
+            Go Back
           </Button>
         </>
       }
@@ -66,20 +67,20 @@ function handleConfirm() {
       <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>
         Cancellation Reason <span style={{ color: "#b83e3e" }}>*</span>
       </label>
-      <select
+      <Select
         className="filter-inline-select"
         style={{ width: "100%", marginTop: 6 }}
         value={reason}
-        onChange={(e) => {
-          setReason(e.target.value);
+        onChange={(v) => {
+          setReason(v);
           setError(false);
         }}
-      >
-        <option value="" disabled>— Select reason —</option>
-        {Object.entries(CANCELLATION_REASON_LABEL).map(([code, label]) => (
-          <option key={code} value={code}>{label}</option>
-        ))}
-      </select>
+        placeholder="— Select reason —"
+        options={Object.entries(CANCELLATION_REASON_LABEL).map(([code, label]) => ({
+          value: code,
+          label,
+        }))}
+      />
 
       {error && (
         <p style={{ fontSize: "11.5px", color: "#b83e3e", marginTop: 5 }}>

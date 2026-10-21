@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Modal from "../../ui/Modal";
 import Button from "../../ui/Button";
+import Select from "../../ui/Select";
 import Icon from "../../ui/Icon";
 import type { Visit } from "../../../domain/types";
 import { updateVisitDetails, updatePatientAddress } from "../../../api/visitsApi";
@@ -213,12 +214,17 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
           <div className="edit-field-grid">
             <div>
               <label className="flabel">Delivery & Chronic</label>
-              <select className="fcontrol" value={dac} disabled={locked} onChange={(e) => setDac(e.target.value)}>
-                <option value="">— Select —</option>
-                {Object.entries(DELIVERY_AND_CHRONIC_LABEL).map(([code, label]) => (
-                  <option key={code} value={code}>{label}</option>
-                ))}
-              </select>
+              <Select
+                className="fcontrol"
+                value={dac}
+                disabled={locked}
+                onChange={setDac}
+                placeholder="— Select —"
+                options={[
+                  { value: "", label: "— Select —" },
+                  ...Object.entries(DELIVERY_AND_CHRONIC_LABEL).map(([code, label]) => ({ value: code, label })),
+                ]}
+              />
             </div>
             {showAddress && (
               <div>
@@ -238,23 +244,33 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
               {showDelivery && (
                 <div>
                   <label className="flabel">Delivery Status</label>
-                  <select className="fcontrol" value={delivery} disabled={locked} onChange={(e) => setDelivery(e.target.value)}>
-                    <option value="">— Select —</option>
-                    {Object.entries(DELIVERY_LABEL).map(([code, label]) => (
-                      <option key={code} value={code}>{label}</option>
-                    ))}
-                  </select>
+                  <Select
+                className="fcontrol"
+                value={delivery}
+                disabled={locked}
+                onChange={setDelivery}
+                placeholder="— Select —"
+                options={[
+                  { value: "", label: "— Select —" },
+                  ...Object.entries(DELIVERY_LABEL).map(([code, label]) => ({ value: code, label })),
+                ]}
+              />
                 </div>
               )}
               {showChronic && (
                 <div>
                   <label className="flabel">Chronic Status</label>
-                  <select className="fcontrol" value={chronic} disabled={locked} onChange={(e) => setChronic(e.target.value)}>
-                    <option value="">— Select —</option>
-                    {Object.entries(CHRONIC_LABEL).map(([code, label]) => (
-                      <option key={code} value={code}>{label}</option>
-                    ))}
-                  </select>
+                  <Select
+                className="fcontrol"
+                value={chronic}
+                disabled={locked}
+                onChange={setChronic}
+                placeholder="— Select —"
+                options={[
+                  { value: "", label: "— Select —" },
+                  ...Object.entries(CHRONIC_LABEL).map(([code, label]) => ({ value: code, label })),
+                ]}
+              />
                 </div>
               )}
               {showRefill && (
@@ -275,12 +291,17 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
           <div className="edit-field-grid full">
             <div>
               <label className="flabel">Notes</label>
-              <select className="fcontrol" value={notes} disabled={locked} onChange={(e) => setNotes(e.target.value)}>
-                <option value="">— Select —</option>
-                {Object.entries(NOTES_LABEL).map(([code, label]) => (
-                  <option key={code} value={code}>{label}</option>
-                ))}
-              </select>
+              <Select
+                className="fcontrol"
+                value={notes}
+                disabled={locked}
+                onChange={setNotes}
+                placeholder="— Select —"
+                options={[
+                  { value: "", label: "— Select —" },
+                  ...Object.entries(NOTES_LABEL).map(([code, label]) => ({ value: code, label })),
+                ]}
+              />
             </div>
           </div>
 
@@ -296,9 +317,16 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
               />
             </div>
           </div>
+
+          {/* Fills the space under the form, beside Medications / Timeline. */}
+          <div className="edit-divider-section">
+            <span>Insurance Card</span>
+          </div>
+
+          <AttachmentsPanel visit={visit} />
         </div>
 
-    <div className="edit-side-col">
+        <div className="edit-side-col">
           <div className="edit-section-card">
             <div className="edit-section-title">
               <Icon name="capsule-pill" /> Medications
@@ -335,12 +363,6 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
         </div>
       </div>
 
-      <div className="edit-divider-section">
-        <span>Insurance Card</span>
-      </div>
-
-      <AttachmentsPanel visit={visit} />
-
       {isDispensed && (
         <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 10 }}>
           This visit has been dispensed — some workflow actions no longer apply.
@@ -348,19 +370,30 @@ function EditModalForm({ visit, onClose, onSaved }: EditModalFormProps) {
       )}
 
       <div className="edit-sticky-footer">
-        <Button variant="ghost" onClick={onClose}>
-          Close
-        </Button>
-        {!isCancelled && !isDispensed && (
-          <Button variant="gold" icon="bi-printer" onClick={() => setShowPrintQueue(true)}>
-            Print Queue No.
-          </Button>
-        )}
         {!isCancelled && (
-          <Button variant="primary" icon="bi-floppy" onClick={handleSave} loading={saving}>
+          <Button
+            variant="primary"
+            icon="bi-floppy"
+            className="ef-save"
+            onClick={handleSave}
+            loading={saving}
+          >
             Save Data
           </Button>
         )}
+        {!isCancelled && !isDispensed && (
+          <Button
+            variant="gold"
+            icon="bi-printer"
+            className="ef-print"
+            onClick={() => setShowPrintQueue(true)}
+          >
+            Print Queue No.
+          </Button>
+        )}
+        <Button variant="ghost" className="ef-close" onClick={onClose}>
+          Close
+        </Button>
       </div>
 
       <PrintQueueModal

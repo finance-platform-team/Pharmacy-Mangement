@@ -53,12 +53,12 @@ function PrintQueueModalForm({ visit, open, onClose }: PrintQueueModalFormProps)
         {qVal}
       </div>
 
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 18 }}>
-        <Button variant="ghost" onClick={onClose}>
-          Cancel
-        </Button>
+      <div className="modal-actions">
         <Button variant="primary" icon="bi-printer" onClick={handlePrint}>
           Print
+        </Button>
+        <Button variant="ghost" onClick={onClose}>
+          Cancel
         </Button>
       </div>
     </Modal>

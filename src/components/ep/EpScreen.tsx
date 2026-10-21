@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEpVisits } from "../../hooks/useEpVisits";
 import { useEpActions } from "../../hooks/useEpActions";
 import { useToast } from "../../hooks/useToast";
@@ -9,35 +9,73 @@ import EpManual from "./EpManual";
 import EpDraftConfirmModal from "./modals/EpDraftConfirmModal";
 import CancelRowModal from "../claims/modals/CancelRowModal";
 import UnavailMedsModal from "../claims/modals/UnavailMedsModal";
-import Spinner from "../ui/Spinner";
 import ToastStack from "../ui/ToastStack";
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import { saveUnavailableMedications } from "../../api/medsApi";
+import { createVisitFromView } from "../../api/epApi";
+import { startSqlKeepAlive } from "../../api/medicationOlApi";
 import type { Visit } from "../../domain/types";
 import type { SpAttachmentVisit } from "../../domain/ٍSpAttachments";
-import GetPatientPrescriptionModal from "../shared/GetPatientPrescriptionModal";
 import AttachmentsPanel from "../attachments/AttachmentsPanel";
 
 export default function EpScreen() {
   const [detailVisit, setDetailVisit] = useState<Visit | null>(null);
-  // Pause background polling while the prescription detail screen is open —
-  // matches PHWEBRESCOURCE.HTML's isUserBusy() check for #epViewDetail.
-  const { visits, loading, reload, setDateRange } = useEpVisits(!!detailVisit);
+  const {
+    visits,
+    loading,
+    error,
+    searched,
+    warnings,
+    verifying,
+    checking,
+    phone: searchedPhone,
+    search,
+    refresh,
+    removeVisit,
+    markSaved,
+  } = useEpVisits();
   const { toasts, showToast } = useToast();
   const { systemUserId } = useCurrentUser();
-  const { draft, cancel, busyId } = useEpActions({ showToast, reload });
+  const { draft, cancel, busyId } = useEpActions({ showToast, removeVisit });
+
+  // Opens the SQL connections early, keeps them alive while this screen is
+  // open, and logs how each database answers.
+  useEffect(() => startSqlKeepAlive(), []);
 
   const [showManual, setShowManual] = useState(false);
   const [draftModalVisit, setDraftModalVisit] = useState<Visit | null>(null);
   const [cancelModalVisit, setCancelModalVisit] = useState<Visit | null>(null);
   const [unavailModalVisit, setUnavailModalVisit] = useState<Visit | null>(null);
 
-  const [pvModalOpen, setPvModalOpen] = useState(false);
-
   // Attachments modal, shown right after a manual prescription is created —
   // opens immediately, no waiting/polling for any link to "generate".
   const [attachModalVisit, setAttachModalVisit] = useState<SpAttachmentVisit | null>(null);
+
+  // Uploading a document before Draft is confirmed saves the view-only entry to
+  // Dataverse (as an EP entry, no status yet) so the upload has a visit to attach
+  // to. One in-flight save at a time; every place holding the entry is re-pointed
+  // at the real record afterwards.
+  const savingRef = useRef<Promise<string> | null>(null);
+  function ensureSaved(visit: Visit): Promise<string> {
+    if (!visit.fromView) return Promise.resolve(visit.id);
+    if (!savingRef.current) {
+      savingRef.current = createVisitFromView(visit, null)
+        .then((dvId) => {
+          markSaved(visit.id, dvId);
+          const repoint = (v: Visit | null) =>
+            v && v.id === visit.id ? { ...v, id: dvId, fromView: false } : v;
+          setDraftModalVisit(repoint);
+          setDetailVisit(repoint);
+          setCancelModalVisit(repoint);
+          return dvId;
+        })
+        .finally(() => {
+          savingRef.current = null;
+        });
+    }
+    return savingRef.current;
+  }
 
   function handleDraftConfirm(visit: Visit) {
     draft(visit);
@@ -70,7 +108,7 @@ export default function EpScreen() {
   // data needed to open the attachments panel right away (no ID-only wait).
   function handleManualCreated(visit: { id: string; patientName: string; patientPhone: string; buText: string }) {
     setShowManual(false);
-    reload();
+    refresh();
     setAttachModalVisit(visit);
   }
 
@@ -88,32 +126,33 @@ export default function EpScreen() {
           visit={detailVisit}
           onBack={() => setDetailVisit(null)}
           onOpenDraft={setDraftModalVisit}
+          ensureSaved={ensureSaved}
         />
       ) : (
         <EpList
           visits={visits}
           loading={loading}
           busyId={busyId}
-          onRefresh={reload}
-          onDateRangeChange={setDateRange}
+          searched={searched}
+          searchedPhone={searchedPhone}
+          warnings={warnings}
+          verifying={verifying}
+          checking={checking}
+          error={error}
+          onSearch={search}
           onOpenDetail={setDetailVisit}
           onOpenDraft={setDraftModalVisit}
           onOpenCancel={setCancelModalVisit}
-          onSearchVisits={() => setPvModalOpen(true)}
           onGoManual={() => setShowManual(true)}
         />
       )}
-
-      <GetPatientPrescriptionModal
-        open={pvModalOpen}
-        onClose={() => setPvModalOpen(false)}
-      />
 
       <EpDraftConfirmModal
         open={!!draftModalVisit}
         visit={draftModalVisit}
         onClose={() => setDraftModalVisit(null)}
         onConfirm={handleDraftConfirm}
+        ensureSaved={ensureSaved}
       />
 
       <CancelRowModal
@@ -152,7 +191,6 @@ export default function EpScreen() {
         )}
       </Modal>
 
-      <Spinner show={loading} withCard text="Loading prescriptions…" />
       <ToastStack toasts={toasts} />
     </div>
   );

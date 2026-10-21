@@ -99,6 +99,13 @@ table.pv-results-table td {
   background: var(--gold-500);
 }
 
+.pv-saved-tag {
+  color: var(--green-500);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .pv-details-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

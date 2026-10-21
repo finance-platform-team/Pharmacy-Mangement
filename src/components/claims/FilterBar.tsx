@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import type { FilterState } from "../../domain/filters";
 import Button from "../ui/Button";
 import Icon from "../ui/Icon";
+import Select from "../ui/Select";
+import DatePicker from "../ui/DatePicker";
 import { useBusinessUnitContext } from "../../BusinessUnitContext";
 import { ALL_LABEL } from "../shared/BuSelector";
 import "./FilterBar.css";
@@ -12,7 +14,6 @@ interface FilterBarProps {
   filters: FilterState;
   onFiltersChange: (filters: FilterState) => void;
   onRefresh: () => void;
-  onSearchVisits: () => void;
 }
 
 export default function FilterBar({
@@ -21,7 +22,6 @@ export default function FilterBar({
   filters,
   onFiltersChange,
   onRefresh,
-  onSearchVisits,
 }: FilterBarProps) {
   const { selectedBuName } = useBusinessUnitContext();
   const isArc = selectedBuName.toUpperCase() === "ARC" || selectedBuName === ALL_LABEL;
@@ -50,47 +50,53 @@ return (
             <Icon name="funnel" /> Filter by
           </span>
 
-          <select
+          <Select
             className="filter-inline-select"
+            ariaLabel="Status"
             value={filters.status ?? ""}
-            onChange={(e) => updateFilter("status", e.target.value)}
-          >
-            <option value="">Select status</option>
-            <option value="Draft">Draft</option>
-            <option value="Attended">Attended</option>
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            {isArc && <option value="Preparing">Preparing</option>}
-            <option value="Dispensed">Dispensed</option>
-            <option value="Cancelled">Cancelled</option>
-          </select>
+            onChange={(v) => updateFilter("status", v)}
+            options={[
+              { value: "", label: "Select status" },
+              { value: "Draft", label: "Draft" },
+              { value: "Attended", label: "Attended" },
+              { value: "Pending", label: "Pending" },
+              { value: "Approved", label: "Approved" },
+              ...(isArc ? [{ value: "Preparing", label: "Preparing" }] : []),
+              { value: "Dispensed", label: "Dispensed" },
+              { value: "Cancelled", label: "Cancelled" },
+            ]}
+          />
 
-          <select
+          <Select
             className="filter-inline-select"
+            ariaLabel="Delivery"
             value={filters.delivery ?? ""}
-            onChange={(e) => updateFilter("delivery", e.target.value)}
-          >
-            <option value="">Select delivery</option>
-            <option value="Pickup">Pickup</option>
-            <option value="OnWay">On Way</option>
-            <option value="Done">Done</option>
-          </select>
+            onChange={(v) => updateFilter("delivery", v)}
+            options={[
+              { value: "", label: "Select delivery" },
+              { value: "Pickup", label: "Pickup" },
+              { value: "OnWay", label: "On Way" },
+              { value: "Done", label: "Done" },
+            ]}
+          />
 
-          <select
+          <Select
             className="filter-inline-select"
+            ariaLabel="Chronic"
             value={filters.chronic ?? ""}
-            onChange={(e) => updateFilter("chronic", e.target.value)}
-          >
-            <option value="">Select chronic</option>
-            <option value="Chronic">Chronic</option>
-            <option value="Acute">Acute</option>
-          </select>
+            onChange={(v) => updateFilter("chronic", v)}
+            options={[
+              { value: "", label: "Select chronic" },
+              { value: "Chronic", label: "Chronic" },
+              { value: "Acute", label: "Acute" },
+            ]}
+          />
 
-          <input
-            type="date"
+          <DatePicker
             className="filter-inline-date"
+            ariaLabel="Date"
             value={filters.date ?? ""}
-            onChange={(e) => updateFilter("date", e.target.value)}
+            onChange={(v) => updateFilter("date", v)}
           />
 
           <Button variant="ghost" size="sm" icon="bi-x-circle" onClick={clearAll}>
@@ -112,10 +118,6 @@ return (
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
-        <Button variant="primary" icon="bi-clock-history" onClick={onSearchVisits}>
-          Search Visits
-        </Button>
-
         <Button variant="ghost" icon="bi-arrow-clockwise" onClick={onRefresh}>
           Refresh
         </Button>

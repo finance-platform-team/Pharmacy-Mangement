@@ -42,7 +42,7 @@ export default function ClaimsTable({
         <span className="badge-count">{claims.length} records</span>
       </div>
       <div className="table-scroll">
-        <table className="qt">
+        <table className="qt rt-cards">
           <thead>
             <tr>
               <th className="c">Attended</th>

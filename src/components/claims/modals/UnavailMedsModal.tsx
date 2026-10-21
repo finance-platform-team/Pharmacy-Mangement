@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Modal from "../../ui/Modal";
 import Button from "../../ui/Button";
+import Icon from "../../ui/Icon";
 import type { Visit, Medication } from "../../../domain/types";
 import { fetchMedicationsForVisit } from "../../../api/medsApi";
 import "./UnavailMedsModal.css";
@@ -75,11 +76,11 @@ export default function UnavailMedsModal({
       size="md"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
           <Button variant="danger" icon="bi-check-lg" onClick={handleConfirm}>
             Confirm & Cancel Visit
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
           </Button>
         </>
       }
@@ -92,7 +93,7 @@ export default function UnavailMedsModal({
 
       {!loading && meds.length === 0 && (
         <div style={{ textAlign: "center", padding: 20, color: "var(--text-muted)", fontSize: "0.83rem" }}>
-          <i className="bi bi-info-circle me-1" /> No medications recorded for this visit.
+          <Icon name="info-circle" className="me-1" /> No medications recorded for this visit.
         </div>
       )}
 

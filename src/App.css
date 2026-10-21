@@ -2,24 +2,57 @@
   padding: 24px;
 }
 
-.app-tabs {
+/* Header — mirrors PharmacyWebResource_5.html */
+.app-shell-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   display: flex;
   align-items: center;
-  gap: 2px;
-  border-bottom: 2px solid rgba(140, 138, 124, 0.44);
-  margin: 0 0 24px;
-}
-
-.app-tabs-row {
-  justify-content: space-between;
   flex-wrap: wrap;
-  row-gap: 8px;
+  gap: 20px;
+  padding: 8px 20px;
+  background: var(--white);
+  border-bottom: 2px solid var(--green-500);
+  box-shadow: var(--shadow-sm);
 }
 
-.app-tabs-group {
+.app-shell-logo {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+}
+
+.main-tabs {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.main-tab-btn {
+  padding: 8px 16px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--white);
+  border: 1.5px solid var(--green-200);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--t);
+}
+
+.main-tab-btn:hover {
+  background: linear-gradient(135deg, var(--green-200), var(--gold-300));
+  border-color: var(--green-400);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.main-tab-btn.active {
+  color: var(--white);
+  background: linear-gradient(135deg, var(--green-500), var(--green-600));
+  border-color: var(--green-600);
 }
 
 @media (max-width: 640px) {
@@ -27,36 +60,36 @@
     padding: 12px;
   }
 
-  .app-tab-btn {
-    padding: 8px 14px;
-    font-size: 12.5px;
+  .app-shell-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 14px;
+  }
+
+  .app-shell-logo {
+    height: 36px;
+    align-self: flex-start;
+  }
+
+  .app-shell-header > .bu-selector,
+  .app-shell-header > .auto-refresh {
+    justify-content: center;
+  }
+
+  .main-tabs {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .main-tab-btn {
+    flex: 1;
+    text-align: center;
   }
 }
 
-.app-tab-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 10px 22px;
-  font-family: var(--font-body);
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--text-muted);
-  background: none;
-  border: none;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -2px;
-  cursor: pointer;
-  border-radius: 8px 8px 0 0;
-  transition: all 0.2s;
-}
-
-.app-tab-btn:hover {
-  color: var(--green-600);
-}
-
-.app-tab-btn.active {
-  color: var(--green-600);
-  border-bottom-color: var(--gold-500);
-  font-weight: 600;
+@media (min-width: 641px) and (max-width: 1024px) {
+  .app-shell-header {
+    row-gap: 10px;
+  }
 }

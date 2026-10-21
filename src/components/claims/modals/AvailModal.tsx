@@ -122,11 +122,11 @@ export default function AvailModal({
       scrollable
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
-            Close
-          </Button>
           <Button variant="primary" icon="bi-check-lg" onClick={handleConfirm} loading={saving}>
             Confirm Selection
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            Close
           </Button>
         </>
       }

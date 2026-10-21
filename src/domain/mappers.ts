@@ -32,7 +32,8 @@ export function mapMedication(m: Crf79_medicationses): Medication {
     adminNotes: clean(m.crf79_administrationnotes),
     patientNotes: clean(m.crf79_patientnotes),
     alternative: clean(m.crf79_alternative),
-    available: m.crf79_availability === true,
+    // Not reviewed yet (null) counts as available — Yes is the default; only an explicit No is a shortage.
+    available: m.crf79_availability !== false,
     discontinued: m.new_discontinued === true,
     estPrice: m.crf79_estimatedprice ?? 0,
     details: clean(m.crf79_orderdetails),

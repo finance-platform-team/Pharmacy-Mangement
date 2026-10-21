@@ -1,15 +1,29 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { PrintContext } from "./PrintContext";
+import { PrintContext, type PrintOptions } from "./PrintContext";
 
 export function PrintProvider({ children }: { children: ReactNode }) {
   const [content, setContent] = useState<ReactNode | null>(null);
+  const [pageSize, setPageSize] = useState<string | null>(null);
   const pendingRef = useRef(false);
 
-  const requestPrint = useCallback((node: ReactNode) => {
+  const requestPrint = useCallback((node: ReactNode, options?: PrintOptions) => {
     pendingRef.current = true;
+    setPageSize(options?.pageSize ?? null);
     setContent(node);
   }, []);
+
+  // A custom paper (the queue-ticket roll) needs its own @page size, and CSS
+  // can't switch @page by content — so it is injected for the duration of this
+  // print only. Declared before the print effect so it is in the DOM first.
+  useEffect(() => {
+    if (!pageSize) return;
+    const style = document.createElement("style");
+    style.setAttribute("data-print-page", "");
+    style.textContent = `@media print { @page { size: ${pageSize}; margin: 0; } }`;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, [pageSize]);
 
   // Wait for an actual browser paint after content is set before calling
   // window.print() — a plain setTimeout can fire before the browser has
@@ -38,6 +52,7 @@ export function PrintProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     function handleAfterPrint() {
       setContent(null);
+      setPageSize(null);
     }
     window.addEventListener("afterprint", handleAfterPrint);
     return () => window.removeEventListener("afterprint", handleAfterPrint);
@@ -58,7 +73,12 @@ export function PrintProvider({ children }: { children: ReactNode }) {
         would print at all. The portal makes #printArea a true direct
         sibling of #root under <body>, matching what the CSS expects.
       */}
-      {createPortal(<div id="printArea">{content}</div>, document.body)}
+      {createPortal(
+        <div id="printArea" className={pageSize ? "pr-ticket-area" : undefined}>
+          {content}
+        </div>,
+        document.body,
+      )}
     </PrintContext.Provider>
   );
 }

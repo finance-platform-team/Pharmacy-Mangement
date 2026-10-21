@@ -2,12 +2,16 @@ import Modal from "../../ui/Modal";
 import Button from "../../ui/Button";
 import AttachmentsPanel from "../../attachments/AttachmentsPanel";
 import type { Visit } from "../../../domain/types";
+// .pv-details-grid / .pv-detail-box (patient summary block) are defined here.
+import "../../shared/GetPatientPrescriptionModal.css";
 
 interface EpDraftConfirmModalProps {
   open: boolean;
   visit: Visit | null;
   onClose: () => void;
   onConfirm: (visit: Visit) => void;
+  /** Saves a view-only entry to Dataverse so documents can be attached. */
+  ensureSaved?: (visit: Visit) => Promise<string>;
 }
 
 export default function EpDraftConfirmModal({
@@ -15,6 +19,7 @@ export default function EpDraftConfirmModal({
   visit,
   onClose,
   onConfirm,
+  ensureSaved,
 }: EpDraftConfirmModalProps) {
   if (!visit) return null;
 
@@ -26,11 +31,11 @@ export default function EpDraftConfirmModal({
       icon="bi-check2-circle"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
-            Go Back
-          </Button>
           <Button variant="gold" icon="bi-check-lg" onClick={() => onConfirm(visit)}>
             Confirm Draft
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            Go Back
           </Button>
         </>
       }
@@ -50,7 +55,10 @@ export default function EpDraftConfirmModal({
         </div>
       </div>
 
-      <AttachmentsPanel visit={visit} />
+      <AttachmentsPanel
+        visit={visit}
+        ensureSaved={ensureSaved ? () => ensureSaved(visit) : undefined}
+      />
     </Modal>
   );
 }

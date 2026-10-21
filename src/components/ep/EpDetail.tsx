@@ -22,14 +22,16 @@ interface EpDetailProps {
   visit: Visit;
   onBack: () => void;
   onOpenDraft: (visit: Visit) => void;
+  /** Saves a view-only entry to Dataverse so documents can be attached. */
+  ensureSaved?: (visit: Visit) => Promise<string>;
 }
 
-export default function EpDetail({ visit: rx, onBack, onOpenDraft }: EpDetailProps) {
+export default function EpDetail({ visit: rx, onBack, onOpenDraft, ensureSaved }: EpDetailProps) {
   const notesText = rx.notes || undefined;
   const { printPrescription } = usePrintPrescription();
 
   return (
-    <div>
+    <div className="ep-form-page">
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         flexWrap: "wrap", gap: 12, marginBottom: 24,
@@ -195,7 +197,7 @@ export default function EpDetail({ visit: rx, onBack, onOpenDraft }: EpDetailPro
         )}
 
         <div className="ep-detail-section">
-          <AttachmentsPanel visit={rx} />
+          <AttachmentsPanel visit={rx} ensureSaved={ensureSaved ? () => ensureSaved(rx) : undefined} />
         </div>
       </div>
     </div>

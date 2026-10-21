@@ -1,6 +1,11 @@
-import { Crf79_visitsesService } from "../generated/services/Crf79_visitsesService";
-import { Crf79_patientsesService } from "../generated/services/Crf79_patientsesService";
+import {
+  Crf79_visitsesService,
+  Crf79_patientsesService,
+  Crf79_medicationsesService,
+} from "./dataverse";
+import type { IOperationResult } from "@microsoft/power-apps/data";
 import { STATUS } from "../domain/status";
+import type { Visit } from "../domain/types";
 
 /**
  * Converts an ePrescription entry into a Draft claim, mirroring the core
@@ -12,6 +17,161 @@ export async function draftEpVisit(visitId: string) {
     crf79_status: STATUS.DRAFT,
     crf79_attendat: undefined,
   });
+}
+
+const odataEsc = (s: string) => s.replace(/'/g, "''");
+
+/**
+ * The generated services report a failed write as { success: false, error }
+ * instead of throwing, so a plain `await` would carry on as if it worked.
+ * Turns that into a real error that says what Dataverse refused.
+ */
+async function written<T>(op: Promise<IOperationResult<T>>, what: string): Promise<IOperationResult<T>> {
+  const res = await op;
+  if (!res.success) {
+    const err = res.error as { message?: string } | string | undefined;
+    const msg = typeof err === "object" ? err?.message : err;
+    throw new Error(`${what}: ${String(msg ?? "Dataverse rejected the request").replace(/s+/g, " ").slice(0, 300)}`);
+  }
+  return res;
+}
+
+/**
+ * Saves an ePrescription that so far only exists in the SQL view
+ * (PA.medicationOL) into Dataverse, as if it had always been there. Every
+ * table is UPSERTED on its key column (value + branch code, e.g. "99920AAC"):
+ *   1) patient  → crf79_patients     on crf79_patientkey      (PatientID + BU)
+ *   2) visit    → crf79_visits       on crf79_prescriptionkey (visit ID + BU)
+ *   3) meds     → crf79_medications  on crf79_medicationkey   (TradeId + BU)
+ * The visit's branch is the business-unit lookup (new_BU), resolved from the
+ * businessunits table. Returns the visit's crf79_visitsid. `status` is the
+ * visit's crf79_status; pass null to just save it as an EP entry (status
+ * empty) — used when a document is uploaded before Draft is confirmed.
+ */
+export async function createVisitFromView(visit: Visit, status: number | null): Promise<string> {
+  if (!visit.keys) throw new Error("Missing Dataverse keys on this prescription");
+  if (!visit.businessUnit) {
+    throw new Error(`Branch "${visit.buText || "?"}" was not found in Business Units`);
+  }
+
+  // The three "does it exist already?" lookups don't depend on each other —
+  // run them together (one round trip instead of three in a row), and refuse
+  // an already-saved prescription BEFORE writing anything.
+  const medsWithKey = visit.medications.filter((m) => m.key);
+  const CHUNK = 30;
+  const medChunks: typeof medsWithKey[] = [];
+  for (let i = 0; i < medsWithKey.length; i += CHUNK) medChunks.push(medsWithKey.slice(i, i + CHUNK));
+
+  const [foundPatient, foundVisit, medLookups] = await Promise.all([
+    Crf79_patientsesService.getAll({
+      select: ["crf79_patientsid"],
+      filter: `crf79_patientkey eq '${odataEsc(visit.keys.patient)}'`,
+      top: 1,
+    }),
+    Crf79_visitsesService.getAll({
+      select: ["crf79_visitsid", "crf79_status"],
+      filter: `crf79_prescriptionkey eq '${odataEsc(visit.keys.visit)}'`,
+      top: 1,
+    }),
+    Promise.all(
+      medChunks.map((chunk) =>
+        Crf79_medicationsesService.getAll({
+          select: ["crf79_medicationsid", "crf79_medicationkey"],
+          filter: chunk.map((m) => `crf79_medicationkey eq '${odataEsc(m.key!)}'`).join(" or "),
+        }),
+      ),
+    ),
+  ]);
+
+  const existingVisit = foundVisit.data?.[0];
+  // Someone already moved it past the EP stage — don't reset its status.
+  if (existingVisit && existingVisit.crf79_status != null) {
+    throw new Error("This prescription was already saved by someone else — refresh the list");
+  }
+  const existingMeds = new Map<string, string>();
+  for (const res of medLookups) {
+    for (const r of res.data ?? []) {
+      if (r.crf79_medicationkey) existingMeds.set(r.crf79_medicationkey, r.crf79_medicationsid);
+    }
+  }
+
+  // 1) patient — upsert on crf79_patientkey
+  const patientData = {
+    crf79_patientkey: visit.keys.patient,
+    crf79_patientname: visit.patientName,
+    crf79_phonenumber: visit.patientPhone,
+    crf79_patientcode: visit.patientCode !== "—" ? visit.patientCode : undefined,
+    crf79_company: visit.company || undefined,
+    crf79_subcontractor: visit.subcontractor || undefined,
+  };
+  let patientId = foundPatient.data?.[0]?.crf79_patientsid ?? "";
+  if (patientId) {
+    await written(Crf79_patientsesService.update(patientId, patientData), "Could not update the patient");
+  } else {
+    const created = await written(
+      Crf79_patientsesService.create(patientData as never),
+      "Could not create the patient",
+    );
+    patientId = created.data?.crf79_patientsid ?? "";
+  }
+  if (!patientId) throw new Error("Could not save the patient record");
+
+  // 2) visit — upsert on crf79_prescriptionkey
+  const orderDate = visit.orderDate ? new Date(visit.orderDate) : null;
+  const visitData: Record<string, unknown> = {
+    crf79_prescriptionkey: visit.keys.visit,
+    "crf79_Patient@odata.bind": `/crf79_patientses(${patientId})`,
+    "new_BU@odata.bind": `/businessunits(${visit.businessUnit})`,
+    crf79_visitid: visit.visitId,
+    crf79_status: status ?? undefined,
+    crf79_manual: false,
+    crf79_physicianname: visit.physician || undefined,
+    crf79_specialty: visit.specialty !== "—" ? visit.specialty : undefined,
+    new_patientphonenumber: visit.patientPhone,
+    new_company: visit.company || undefined,
+    new_subcontractor: visit.subcontractor || undefined,
+  };
+  let visitGuid = existingVisit?.crf79_visitsid ?? "";
+  if (existingVisit) {
+    await written(Crf79_visitsesService.update(visitGuid, visitData as never), "Could not update the visit");
+  } else {
+    if (orderDate && !isNaN(orderDate.getTime())) {
+      visitData.overriddencreatedon = orderDate.toISOString();
+    }
+    const created = await written(Crf79_visitsesService.create(visitData as never), "Could not create the visit");
+    visitGuid = created.data?.crf79_visitsid ?? "";
+  }
+  if (!visitGuid) throw new Error("Could not save the visit record (Dataverse did not return its id)");
+
+  // 3) medications — upsert each on crf79_medicationkey
+  const medResults = await Promise.allSettled(
+    medsWithKey.map((m) => {
+      const data = {
+        crf79_medicationkey: m.key,
+        crf79_medication: m.name,
+        crf79_dose: m.dose || undefined,
+        crf79_administrationnotes: m.adminNotes || undefined,
+        crf79_patientnotes: m.patientNotes || undefined,
+        crf79_dispensingnotes: m.dispensingNotes || undefined,
+        crf79_estimatedprice: m.estPrice || undefined,
+        crf79_orderdetails: m.details || undefined,
+        "crf79_VisitMedication@odata.bind": `/crf79_visitses(${visitGuid})`,
+      };
+      const medId = existingMeds.get(m.key!);
+      return medId
+        ? written(Crf79_medicationsesService.update(medId, data as never), "update")
+        : written(Crf79_medicationsesService.create(data as never), "create");
+    }),
+  );
+  const failures = medResults.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+  if (failures.length > 0) {
+    const why = String((failures[0].reason as Error)?.message ?? failures[0].reason);
+    throw new Error(
+      `Visit saved, but ${failures.length} of ${medResults.length} medications failed to save (${why})`,
+    );
+  }
+
+  return visitGuid;
 }
 
 export interface ManualPrescriptionPayload {

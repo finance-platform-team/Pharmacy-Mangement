@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+// Bundled as a data URI: the Power Apps host blocks images from other domains.
+import logoUrl from "../../assets/andalusia-health-logo.png?inline";
 
 interface PrintShellProps {
   children: ReactNode;
@@ -18,8 +20,8 @@ export default function PrintShell({ children, branchLabel }: PrintShellProps) {
         <div className="pr-header-left">
           <img
             className="pr-header-logo"
-            src="https://andalusiagroup.net/_nuxt/img/ag-logo-en.42bbc5d.png"
-            alt="Andalusia"
+            src={logoUrl}
+            alt="Andalusia Health"
           />
         </div>
         <div className="pr-header-right">{branchLabel || "PHARMACY DEPARTMENT"}</div>

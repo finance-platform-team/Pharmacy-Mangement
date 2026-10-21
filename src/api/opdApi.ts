@@ -1,9 +1,6 @@
-import { Opd_patientsService } from "../generated/services/Opd_patientsService";
-import { Opd_visitsService } from "../generated/services/Opd_visitsService";
+import { Opd_patientsService, Opd_visitsService, New_contractorsService, New_physiciansService } from "./dataverse";
 import type { Opd_patients } from "../generated/models/Opd_patientsModel";
 import type { Opd_visits } from "../generated/models/Opd_visitsModel";
-import { New_contractorsService } from "../generated/services/New_contractorsService";
-import { New_physiciansService } from "../generated/services/New_physiciansService";
 import { fetchAllPages } from "../utils/fetchAllPages";
 
 export interface OpdSearchResult {
