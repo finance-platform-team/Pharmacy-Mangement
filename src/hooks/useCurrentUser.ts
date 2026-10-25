@@ -35,7 +35,12 @@ function resolveCurrentUser(): Promise<ResolvedUser> {
       });
       const match = result.data?.[0];
       if (!match) {
-        throw new Error("No systemuser found matching this Azure AD objectId");
+        // Shows up as the "Could not check your access" screen — say who and what to ask for.
+        const who = ctx.user?.userPrincipalName || ctx.user?.fullName || azureObjectId;
+        throw new Error(
+          `Your account (${who}) was not found in the pharmacy data environment. ` +
+            "Ask an administrator to add you to it and give you a Pharmacy role (e.g. Pharmacy - Pharmacist).",
+        );
       }
       return {
         systemUserId: match.systemuserid,

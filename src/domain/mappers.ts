@@ -104,7 +104,7 @@ export function mapVisit(
     status: label || "Draft",
     statusCode: statusNum ?? -1,
 
-    patientName: clean(patient?.crf79_patientname) || clean(v.crf79_patientname) || "—",
+    patientName: clean(patient?.crf79_patientname) || clean(v.new_patientname) || "—",
     patientPhone: clean(patient?.crf79_phonenumber) || clean(v.new_patientphonenumber) || "—",
     patientCode: clean(patient?.crf79_patientcode) || "—",
     company: clean(patient?.crf79_company) || clean(v.new_company),
@@ -156,6 +156,7 @@ notesCode: v.crf79_notes ?? null,
     dispenseTime: statusNum === 4 ? v.modifiedon ?? null : null,
     dispensedBy: clean(v["_crf79_dispensedby_value@OData.Community.Display.V1.FormattedValue"]),
     cancelledBy: clean(v["_crf79_cancelledby_value@OData.Community.Display.V1.FormattedValue"]),
+    createdBy: clean(v["_createdby_value@OData.Community.Display.V1.FormattedValue"]),
 
     attendApproveMin: v.crf79_attendapprovetime,
     approveDispenseMin: v.crf79_approvedispensetime,

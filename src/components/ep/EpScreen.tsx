@@ -37,7 +37,7 @@ export default function EpScreen() {
   } = useEpVisits();
   const { toasts, showToast } = useToast();
   const { systemUserId } = useCurrentUser();
-  const { draft, cancel, busyId } = useEpActions({ showToast, removeVisit });
+  const { draft, draftAndAttend, cancel, busyId } = useEpActions({ showToast, removeVisit });
 
   // Opens the SQL connections early, keeps them alive while this screen is
   // open, and logs how each database answers.
@@ -79,6 +79,12 @@ export default function EpScreen() {
 
   function handleDraftConfirm(visit: Visit) {
     draft(visit);
+    setDraftModalVisit(null);
+    setDetailVisit(null);
+  }
+
+  function handleDraftAttendConfirm(visit: Visit) {
+    void draftAndAttend(visit, systemUserId);
     setDraftModalVisit(null);
     setDetailVisit(null);
   }
@@ -152,6 +158,7 @@ export default function EpScreen() {
         visit={draftModalVisit}
         onClose={() => setDraftModalVisit(null)}
         onConfirm={handleDraftConfirm}
+        onConfirmAttend={handleDraftAttendConfirm}
         ensureSaved={ensureSaved}
       />
 

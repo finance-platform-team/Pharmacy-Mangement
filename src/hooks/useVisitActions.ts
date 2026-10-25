@@ -13,32 +13,46 @@ import { useCurrentUser } from "./useCurrentUser";
 import { calcWait } from "../domain/queue";
 import type { ToastType } from "./useToast";
 import type { Visit } from "../domain/types";
-import type { StatusValue } from "../domain/status";
+import { STATUS, statusLabel, type StatusValue } from "../domain/status";
 
 interface UseVisitActionsOptions {
   showToast: (text: string, type?: ToastType) => void;
   /** Quiet delta refresh of the list — resolves once the changed row is merged in. */
   refresh: () => Promise<void>;
+  /** Shows a just-saved change on the row right away. */
+  patchVisit: (id: string, patch: Partial<Visit>) => void;
 }
 
 /**
  * Wires the workflow buttons (Attend/Pending/Approve/Dispense/ChangeStage/
  * Cancel) to the Dataverse update calls in api/visitsApi.ts. Mirrors the
  * old doAttend/doPending/doApprove/doDispense/doChangeStage/doCancel
- * functions. After a successful update it runs a quiet delta refresh (only
- * rows modified since the last load, no blocking spinner) instead of
- * re-fetching the whole list; the row stays marked busy until that lands.
+ * functions. As soon as an update succeeds the row shows the new status
+ * (and is free again); a quiet delta refresh then replaces it with the real
+ * record in the background, instead of the row waiting for that refresh.
  */
-export function useVisitActions({ showToast, refresh }: UseVisitActionsOptions) {
-  const { systemUserId } = useCurrentUser();
+export function useVisitActions({ showToast, refresh, patchVisit }: UseVisitActionsOptions) {
+  const { systemUserId, fullName } = useCurrentUser();
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  async function run(id: string, label: string, action: () => Promise<unknown>) {
+  async function run(id: string, label: string, action: () => Promise<unknown>, patch: Partial<Visit>) {
     setBusyId(id);
+    const t0 = performance.now();
     try {
-      await action();
+      const res = await action();
+      // The generated services report a refused write as { success: false } instead of throwing.
+      if (res && typeof res === "object" && "success" in res && !(res as { success: boolean }).success) {
+        const err = (res as { error?: { message?: string } | string }).error;
+        throw new Error(String((typeof err === "object" ? err?.message : err) ?? "Dataverse rejected the update"));
+      }
+      patchVisit(id, { ...patch, modifiedOn: new Date().toISOString(), worker: fullName || "—" });
       showToast(`${label} ✓`, "ok");
-      await refresh();
+      const tAction = performance.now();
+      void refresh().then(() =>
+        console.info(
+          `[claims] ${label}: update ${Math.round(tAction - t0)}ms, background refresh ${Math.round(performance.now() - tAction)}ms`,
+        ),
+      );
     } catch (err) {
       showToast(`${label} failed: ${String(err)}`, "err");
     } finally {
@@ -46,52 +60,83 @@ export function useVisitActions({ showToast, refresh }: UseVisitActionsOptions) 
     }
   }
 
+  /** The row fields a move to `code` changes, stamped now and by the current user. */
+  const moved = (code: StatusValue): Partial<Visit> => ({ status: statusLabel(code), statusCode: code });
+  const now = () => new Date().toISOString();
+
   const attend = useCallback(
-    (visit: Visit) => run(visit.id, "Attended", () => attendVisit(visit.id, systemUserId)),
-    [systemUserId],
+    (visit: Visit) =>
+      run(visit.id, "Attended", () => attendVisit(visit.id, systemUserId), {
+        ...moved(STATUS.ATTENDED),
+        attended: true,
+        attendedTime: now(),
+        attendedBy: fullName,
+      }),
+    [systemUserId, fullName],
   );
 
   const pending = useCallback(
-    (visit: Visit) => run(visit.id, "Pending", () => pendingVisit(visit.id, systemUserId)),
-    [systemUserId],
+    (visit: Visit) =>
+      run(visit.id, "Pending", () => pendingVisit(visit.id, systemUserId), {
+        ...moved(STATUS.PENDING),
+        pendingTime: now(),
+        pendingBy: fullName,
+      }),
+    [systemUserId, fullName],
   );
 
   const approve = useCallback(
     (visit: Visit) =>
-      run(visit.id, "Approved", () => approveVisit(visit.id, systemUserId, visit.attendedTime)),
-    [systemUserId],
+      run(visit.id, "Approved", () => approveVisit(visit.id, systemUserId, visit.attendedTime), {
+        ...moved(STATUS.APPROVED),
+        approveTime: now(),
+        approvedBy: fullName,
+      }),
+    [systemUserId, fullName],
   );
   const preparing = useCallback(
-    (visit: Visit) => run(visit.id, "Preparing", () => preparingVisit(visit.id, systemUserId)),
-    [systemUserId],
+    (visit: Visit) =>
+      run(visit.id, "Preparing", () => preparingVisit(visit.id, systemUserId), {
+        ...moved(STATUS.PREPARING),
+        preparingTime: now(),
+        preparingBy: fullName,
+      }),
+    [systemUserId, fullName],
   );
 
   const dispense = useCallback(
     (visit: Visit) =>
-      run(visit.id, "Dispensed", () =>
-        dispenseVisit(
-          visit.id,
-          systemUserId,
-          visit.attendedTime,
-          visit.approveTime,
-          visit.attendApproveMin,
-        ),
+      run(
+        visit.id,
+        "Dispensed",
+        () =>
+          dispenseVisit(
+            visit.id,
+            systemUserId,
+            visit.attendedTime,
+            visit.approveTime,
+            visit.attendApproveMin,
+          ),
+        { ...moved(STATUS.DISPENSED), dispenseTime: now(), dispensedBy: fullName },
       ),
-    [systemUserId],
+    [systemUserId, fullName],
   );
 
   const changeStage = useCallback(
     (visit: Visit, target: StatusValue) =>
-      run(visit.id, "Stage changed", () => changeStageVisit(visit, target, systemUserId)),
+      run(visit.id, "Stage changed", () => changeStageVisit(visit, target, systemUserId), moved(target)),
     [systemUserId],
   );
 
   const cancel = useCallback(
     (visit: Visit, reasonCode: number) =>
-      run(visit.id, "Cancelled", () =>
-        cancelVisit(visit.id, reasonCode, calcWait(visit), systemUserId),
+      run(
+        visit.id,
+        "Cancelled",
+        () => cancelVisit(visit.id, reasonCode, calcWait(visit), systemUserId),
+        { ...moved(STATUS.CANCELLED), cancelReason: reasonCode, cancelledBy: fullName },
       ),
-    [systemUserId],
+    [systemUserId, fullName],
   );
 
 return { attend, pending, approve, preparing, dispense, changeStage, cancel, busyId };}

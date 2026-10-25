@@ -1,12 +1,27 @@
-import { MedicationOLService } from "../generated/services/MedicationOLService";
-import { MedicationOLAmhService } from "../generated/services/MedicationOLAmhService";
 import type { MedicationOL } from "../generated/models/MedicationOLModel";
 import type { Medication, Visit } from "../domain/types";
 import type { BusinessUnit } from "../hooks/useBusinessUnit";
 import { Crf79_visitsesService } from "./dataverse";
 import { fetchVirtualRowsByPhone } from "./medicationOlVirtual";
+import { statusLabel } from "../domain/status";
 
 export type EpSource = "ANC" | "AMH";
+
+/**
+ * ePrescriptions are read from the SQL view (PA.medicationOL) first, with the
+ * Dataverse virtual tables as the fallback (see fetchRowsSqlFirst and
+ * medicationOlVirtual.ts). Set to false to read the virtual tables only.
+ * Needs the two SQL data sources in power.config.json.
+ */
+const USE_SQL = true;
+
+/** The SQL connector service of a database, loaded only when SQL is on. */
+async function sqlService(source: EpSource) {
+  if (source === "AMH") {
+    return (await import("../generated/services/MedicationOLAmhService")).MedicationOLAmhService;
+  }
+  return (await import("../generated/services/MedicationOLService")).MedicationOLService;
+}
 
 const odataStr = (s: string) => s.replace(/'/g, "''");
 
@@ -83,7 +98,7 @@ function runQuery(source: EpSource, filter: string): Promise<MedicationOL[]> {
 }
 
 async function runQueryOnce(source: EpSource, filter: string): Promise<MedicationOL[]> {
-  const service = source === "AMH" ? MedicationOLAmhService : MedicationOLService;
+  const service = await sqlService(source);
   let lastError = "query failed";
 
   console.info(`[EP search] ${source} sending: ${filter}`);
@@ -151,9 +166,9 @@ const pinging = new Set<EpSource>();
 function pingSql(source: EpSource, label: string): void {
   if (pinging.has(source)) return;
   pinging.add(source);
-  const service = source === "AMH" ? MedicationOLAmhService : MedicationOLService;
   const t0 = performance.now();
-  withTimeout(service.getAll({ select: ["ID"], top: 1 }), 60000)
+  sqlService(source)
+    .then((service) => withTimeout(service.getAll({ select: ["ID"], top: 1 }), 60000))
     .then(
       (res) =>
         console.info(
@@ -179,6 +194,7 @@ function pingSql(source: EpSource, label: string): void {
  * Returns a function that stops the pings (call it when the screen unmounts).
  */
 export function startSqlKeepAlive(): () => void {
+  if (!USE_SQL) return () => {}; // nothing to keep alive: SQL is switched off
   const sources: EpSource[] = ["ANC", "AMH"];
   sources.forEach((s) => pingSql(s, "warm-up"));
   const timer = setInterval(() => {
@@ -300,20 +316,21 @@ export function groupRowsByVisit(
       approvedBy: "",
       dispensedBy: "",
       cancelledBy: "",
+      createdBy: "",
     });
   }
   return visits;
 }
 
-type ExistingMap = Map<string, { dvId: string; status: number | null }>;
+type ExistingMap = Map<string, { dvId: string; status: number | null; cancelReason: number | null }>;
 
 /**
  * Finds which of these prescriptions already live in Dataverse, keyed by
  * crf79_prescriptionkey → { dvId, status }. Looks them up by their key (the
  * column the saves upsert on) in small chunks: a few quick indexed queries
  * instead of a scan of the whole visits table by phone number.
- * Rows already Drafted/Cancelled/etc. drop out of the active EP list; rows with
- * status null are old-style EP entries that stay (and keep their Dataverse id).
+ * Rows with status null are old-style EP entries; rows already Drafted/Cancelled/etc.
+ * also stay, marked as saved (see applyExisting). All keep their Dataverse id.
  */
 async function findExistingByKeys(keys: string[]): Promise<ExistingMap> {
   const found: ExistingMap = new Map();
@@ -323,7 +340,7 @@ async function findExistingByKeys(keys: string[]): Promise<ExistingMap> {
   const results = await Promise.all(
     chunks.map((chunk) =>
       Crf79_visitsesService.getAll({
-        select: ["crf79_visitsid", "crf79_prescriptionkey", "crf79_status"],
+        select: ["crf79_visitsid", "crf79_prescriptionkey", "crf79_status", "crf79_cancellationreason"],
         filter: chunk.map((k) => `crf79_prescriptionkey eq '${odataStr(k)}'`).join(" or "),
       }),
     ),
@@ -334,7 +351,7 @@ async function findExistingByKeys(keys: string[]): Promise<ExistingMap> {
       found.set(String(v.crf79_prescriptionkey), {
         dvId: v.crf79_visitsid,
         status: v.crf79_status == null ? null : Number(v.crf79_status),
-      });
+        cancelReason: v.crf79_cancellationreason == null ? null : Number(v.crf79_cancellationreason),      });
     }
   }
   return found;
@@ -346,6 +363,17 @@ function applyExisting(visits: Visit[], existing: ExistingMap): Visit[] {
     const dv = existing.get(v.keys?.visit ?? "");
     if (!dv) active.push(v);
     else if (dv.status === null) active.push({ ...v, id: dv.dvId, fromView: false });
+    else {
+      // Already saved past the EP stage: stays listed (marked "Saved") so it can still be cancelled.
+      active.push({
+        ...v,
+        id: dv.dvId,
+        fromView: false,
+        status: statusLabel(dv.status),
+        statusCode: dv.status,
+        cancelReason: dv.cancelReason ?? undefined,
+      });
+    }
   }
   return active;
 }
@@ -359,8 +387,132 @@ const EXISTING_TIMEOUT_MS = 12000;
 /** A dead gateway can hang for minutes — give each database a hard limit (covers the retries). */
 const SQL_TIMEOUT_MS = 75000;
 
-/** Limit for the virtual-table fallback, which only starts after the SQL read has failed. */
+/** Limit for one read of a virtual table. */
 const VIRTUAL_TIMEOUT_MS = 60000;
+
+/** Dataverse refusing the user (missing privilege / 401 / 403): retrying can't help. */
+const PERMISSION_ERROR = /0x80040220|privilege|\bprv[A-Z]|forbidden|\b403\b|unauthori[sz]ed|\b401\b/i;
+
+/** The phone's rows from the virtual table; one retry for a momentary provider error. */
+async function fetchFromVirtual(source: EpSource, t: PhoneTerms): Promise<MedicationOL[]> {
+  try {
+    return await withTimeout(fetchVirtualRowsByPhone(source, t), VIRTUAL_TIMEOUT_MS);
+  } catch (err) {
+    if (PERMISSION_ERROR.test(String((err as Error)?.message ?? err))) throw err;
+    console.warn(`[EP search] ${source} virtual table failed, retrying once`, err);
+    await sleep(800);
+    return withTimeout(fetchVirtualRowsByPhone(source, t), VIRTUAL_TIMEOUT_MS);
+  }
+}
+
+/** A SQL read slower than this also starts the virtual table, so a cold or stuck SQL connection never keeps the user waiting. */
+const SQL_HEDGE_MS = 5000;
+
+/** After SQL failed outright (down / bad login / timeout), skip it for this long and read the virtual table directly. */
+const SQL_COOLDOWN_MS = 2 * 60 * 1000;
+
+const sqlDownUntil = new Map<EpSource, number>();
+
+/**
+ * The phone's rows, SQL first: the SQL view is the preferred source. The
+ * Dataverse virtual table takes over when SQL fails or finds nothing, when SQL
+ * is slow (it is then started alongside and the first answer with rows wins), and —
+ * for a couple of minutes — right away after SQL failed, so one broken
+ * connection costs one slow search, not every search. If both fail, SQL's
+ * error is the one reported. `onAnswer` is told which source answered.
+ */
+function fetchRowsSqlFirst(
+  source: EpSource,
+  t: PhoneTerms,
+  onAnswer: (from: "SQL" | "virtual table") => void,
+): Promise<MedicationOL[]> {
+  const viaVirtual = () => fetchFromVirtual(source, t);
+  if (!USE_SQL || Date.now() < (sqlDownUntil.get(source) ?? 0)) {
+    return viaVirtual().then((rows) => {
+      onAnswer("virtual table");
+      return rows;
+    });
+  }
+
+  return new Promise<MedicationOL[]>((resolve, reject) => {
+    type State = "pending" | "rows" | "empty" | "failed";
+    let sql: State = "pending";
+    let virtual: State = "pending";
+    let virtualStarted = false;
+    let sqlRows: MedicationOL[] = [];
+    let virtualRows: MedicationOL[] = [];
+    let sqlError: unknown;
+    let settled = false;
+
+    // Called after every answer: the first source with rows wins (SQL first);
+    // empty or failed answers only count once neither source can still bring rows.
+    const settle = () => {
+      if (settled) return;
+      let result: MedicationOL[] | null = null;
+      let from: "SQL" | "virtual table" = "SQL";
+      if (sql === "rows") result = sqlRows;
+      else if (virtual === "rows") {
+        result = virtualRows;
+        from = "virtual table";
+      } else if (sql !== "pending" && virtual !== "pending") {
+        if (sql === "empty" || virtual === "empty") result = [];
+        else {
+          settled = true;
+          clearTimeout(hedge);
+          reject(sqlError);
+          return;
+        }
+      }
+      if (!result) return;
+      settled = true;
+      clearTimeout(hedge);
+      if (result.length > 0) onAnswer(from);
+      resolve(result);
+    };
+
+    // SQL gave nothing (empty or failed): the virtual table gets its turn.
+    const startVirtual = () => {
+      if (virtualStarted) return;
+      virtualStarted = true;
+      viaVirtual().then(
+        (rows) => {
+          virtualRows = rows;
+          virtual = rows.length > 0 ? "rows" : "empty";
+          settle();
+        },
+        (err) => {
+          console.warn(`[EP search] ${source} virtual table failed`, err);
+          virtual = "failed";
+          settle();
+        },
+      );
+    };
+    const hedge = setTimeout(startVirtual, SQL_HEDGE_MS);
+
+    withTimeout(fetchRows(source, t), SQL_TIMEOUT_MS).then(
+      (rows) => {
+        sqlRows = rows;
+        sql = rows.length > 0 ? "rows" : "empty";
+        if (sql === "empty") console.info(`[EP search] ${source} SQL found nothing, trying the virtual table`);
+        else onAnswer("SQL");
+        startVirtualIfNeeded();
+        settle();
+      },
+      (err) => {
+        console.warn(`[EP search] ${source} SQL failed, using the virtual table`, err);
+        sql = "failed";
+        sqlError = err;
+        sqlDownUntil.set(source, Date.now() + SQL_COOLDOWN_MS);
+        startVirtualIfNeeded();
+        settle();
+      },
+    );
+
+    function startVirtualIfNeeded() {
+      if (sql !== "rows") startVirtual();
+    }
+  });
+}
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -375,6 +527,15 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 /** Turns connector / gateway noise into one readable sentence. */
 function friendlyError(source: EpSource, err: unknown): string {
   const raw = String((err as Error)?.message ?? err ?? "");
+  if (!USE_SQL) {
+    if (PERMISSION_ERROR.test(raw)) {
+      return `You don't have permission to read the ${source} prescriptions table (Dataverse). Ask an administrator to give your role read access to it.`;
+    }
+    if (/timeout/i.test(raw)) {
+      return `${source} prescriptions table did not respond in time. Please try again.`;
+    }
+    return `${source}: ${raw.replace(/\s+/g, " ").slice(0, 200)}`;
+  }
   if (AUTH_ERROR.test(raw)) {
     return `The saved SQL login for the ${source} connection is invalid or expired. Update its username / password in Power Apps → Connections, then retry.`;
   }
@@ -433,22 +594,9 @@ export async function searchEpByPhone(
   await Promise.all(
     sources.map(async (s) => {
       try {
-        let rows: MedicationOL[];
-        try {
-          rows = await withTimeout(fetchRows(s, terms), SQL_TIMEOUT_MS);
-          console.info(`[EP search] ${s} SQL view ${ms()} (${rows.length} rows)`);
-        } catch (sqlErr) {
-          // The SQL read could not answer (gateway down, bad login, timeout…):
-          // read the same data from the Dataverse virtual table instead.
-          console.warn(`[EP search] ${s} SQL failed after ${ms()}, trying the virtual table`, sqlErr);
-          try {
-            rows = await withTimeout(fetchVirtualRowsByPhone(s, terms), VIRTUAL_TIMEOUT_MS);
-            console.info(`[EP search] ${s} virtual table ${ms()} (${rows.length} rows)`);
-          } catch (virtualErr) {
-            console.warn(`[EP search] ${s} virtual table failed too`, virtualErr);
-            throw sqlErr;
-          }
-        }
+        const rows = await fetchRowsSqlFirst(s, terms, (from) =>
+          console.info(`[EP search] ${s} ${from} answered ${ms()}`),
+        );
         const visits = groupRowsByVisit(rows, s, units);
         raw.push(...visits);
         okCount++;

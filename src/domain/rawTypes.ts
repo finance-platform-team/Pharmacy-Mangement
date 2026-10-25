@@ -18,4 +18,5 @@ export interface Crf79_visitsesRaw extends Crf79_visitses {
   "_crf79_pendingby_value@OData.Community.Display.V1.FormattedValue"?: string;
   "_crf79_preparingby_value@OData.Community.Display.V1.FormattedValue"?: string;
   "_modifiedby_value@OData.Community.Display.V1.FormattedValue"?: string;
+  "_createdby_value@OData.Community.Display.V1.FormattedValue"?: string;
 }

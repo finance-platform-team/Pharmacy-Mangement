@@ -2,6 +2,7 @@ import type { Visit } from "../../domain/types";
 import Button from "../ui/Button";
 import Icon from "../ui/Icon";
 import { queueDisplayForClaim } from "../../domain/queue";
+import { isNoShow, isSaved } from "../../domain/filters";
 import AttachmentsPanel from "../attachments/AttachmentsPanel";
 import { usePrintPrescription } from "../../hooks/usePrintPrescription.tsx";
 import "./EpDetail.css";
@@ -40,7 +41,7 @@ export default function EpDetail({ visit: rx, onBack, onOpenDraft, ensureSaved }
           Back to ePrescriptions
         </Button>
         <div style={{ display: "flex", gap: 8 }}>
-          <Button variant="gold" icon="bi-check2-circle" onClick={() => onOpenDraft(rx)}>
+          <Button variant="gold" icon="bi-check2-circle" disabled={isSaved(rx) && !isNoShow(rx)} onClick={() => onOpenDraft(rx)}>
             Take As Draft
           </Button>
           <Button

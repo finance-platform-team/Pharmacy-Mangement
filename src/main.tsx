@@ -8,11 +8,15 @@ import "./styles/tokens.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles/global.css";
 import App from './App.tsx'
+import { initDataverseOrgUrl } from "./api/dataverse";
 // Phone card layout for tables — last, so it wins over each table's own CSS.
 import "./styles/cards.css";
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+// Find out which Dataverse to use (the one of the environment the app runs in) before anything fetches.
+void initDataverseOrgUrl().finally(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  )
+})

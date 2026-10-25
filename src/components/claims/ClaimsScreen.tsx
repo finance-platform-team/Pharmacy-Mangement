@@ -26,10 +26,10 @@ const PER_PAGE = 20;
 
 export default function ClaimsScreen() {
   const { systemUserId } = useCurrentUser();
-  const { visits, loading, error, reload, refresh } = useVisits();
+  const { visits, loading, error, reload, refresh, patchVisit } = useVisits();
   const { toasts, showToast } = useToast();
   const { attend, pending, approve, preparing, dispense, changeStage, cancel, busyId } =
-    useVisitActions({ showToast, refresh });
+    useVisitActions({ showToast, refresh, patchVisit });
 
   const [stageModalVisit, setStageModalVisit] = useState<Visit | null>(null);
 

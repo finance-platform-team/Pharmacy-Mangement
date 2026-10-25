@@ -13,6 +13,7 @@
  * service it replaces (getAll / get / create / update / delete), so call sites
  * only had to change their import path.
  */
+import { getContext } from "@microsoft/power-apps/app";
 import { MicrosoftDataverseService as Dv } from "../generated/services/MicrosoftDataverseService";
 import type { IGetAllOptions, IGetOptions } from "../generated/models/CommonModels";
 import type { IOperationResult } from "@microsoft/power-apps/data";
@@ -32,17 +33,40 @@ import type { Systemusers, SystemusersBase } from "../generated/models/Systemuse
 import type { Vrt_pamedicationol_amhs } from "../generated/models/Vrt_pamedicationol_amhsModel";
 import type { Vrt_pamedicationol_ancs } from "../generated/models/Vrt_pamedicationol_ancsModel";
 
+let resolvedOrgUrl: string | null = null;
+
+const trimUrl = (u: string) => u.replace(/\/+$/, "");
+
 /**
- * Org URL of the environment that holds the tables (live). Comes from
- * VITE_DATAVERSE_ORG_URL in .env — NOT from the Power Apps context, whose
- * dataverseOrgUrl is the app's *home* environment.
+ * Works out which Dataverse the app talks to — call (and await) it once before the
+ * app renders. By default it is the Dataverse of the environment the app is running
+ * in, read from the Power Apps context, so nothing is tied to one environment.
+ * VITE_DATAVERSE_ORG_URL in .env forces another one when it is set.
  */
-export function getDataverseOrgUrl(): string {
-  const url = import.meta.env.VITE_DATAVERSE_ORG_URL as string | undefined;
-  if (!url) {
-    throw new Error("VITE_DATAVERSE_ORG_URL is not set — add it to .env and rebuild.");
+export async function initDataverseOrgUrl(): Promise<void> {
+  const forced = import.meta.env.VITE_DATAVERSE_ORG_URL as string | undefined;
+  if (forced) {
+    resolvedOrgUrl = trimUrl(forced);
+  } else {
+    try {
+      const fromContext = (await getContext()).app?.dataverseOrgUrl;
+      if (fromContext) resolvedOrgUrl = trimUrl(fromContext);
+    } catch (err) {
+      console.error("[config] could not read the Power Apps context", err);
+    }
   }
-  return url.replace(/\/+$/, "");
+  console.info("[config] Dataverse:", resolvedOrgUrl ?? "(not found)");
+}
+
+/** The Dataverse org URL in use (see initDataverseOrgUrl). */
+export function getDataverseOrgUrl(): string {
+  if (!resolvedOrgUrl) {
+    throw new Error(
+      "The Dataverse environment could not be determined from the Power Apps context. " +
+        "Set VITE_DATAVERSE_ORG_URL in .env and rebuild.",
+    );
+  }
+  return resolvedOrgUrl;
 }
 
 const ACCEPT = "application/json";

@@ -36,7 +36,12 @@ export function buildTimeline(visit: Visit): TimelineStep[] {
   const steps: TimelineStep[] = [];
 
   if (visit.orderDate) {
-    steps.push({ label: "Created", dt: visit.orderDate, time: formatStepTime(visit.orderDate) });
+    steps.push({
+      label: "Created",
+      dt: visit.orderDate,
+      time: formatStepTime(visit.orderDate),
+      user: visit.createdBy,
+    });
   }
   if (visit.attendedTime) {
     steps.push({

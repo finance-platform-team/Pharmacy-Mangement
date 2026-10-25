@@ -100,6 +100,31 @@
   flex-shrink: 0;
 }
 
+/* Every modal's buttons look the same: one height and shape, the actions on the
+   right and the dismiss button (Go Back / Close / Cancel — always the ghost one)
+   on the left, wherever it sits in the markup. */
+.modal-u-footer > .btn-u,
+.modal-actions > .btn-u {
+  min-height: 42px;
+  min-width: 120px;
+  justify-content: center;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.modal-u-footer > .btn-u-ghost,
+.modal-actions > .btn-u-ghost {
+  order: -1;
+  margin-right: auto;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.modal-u-footer > .btn-u-ghost:hover:not(:disabled),
+.modal-actions > .btn-u-ghost:hover:not(:disabled) {
+  color: var(--green-600);
+}
+
 @media (max-width: 640px) {
   /* Centred on phones too; a tall modal scrolls inside instead of leaving the screen. */
   .modal-u-backdrop {
@@ -141,6 +166,12 @@
     flex: none;
     width: 100%;
     justify-content: center;
+  }
+
+  .modal-u-footer > .btn-u-ghost,
+  .modal-actions > .btn-u-ghost {
+    order: 99;
+    margin-right: 0;
   }
 }
 

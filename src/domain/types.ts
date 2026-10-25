@@ -92,6 +92,7 @@ export interface Visit {
   dispenseTime?: string | null;
   dispensedBy: string;
   cancelledBy: string;
+  createdBy: string;
 
   attendApproveMin?: number;
   approveDispenseMin?: number;

@@ -10,7 +10,7 @@ import {
   FileEarmarkMedicalFill, Toggle2Off, ExclamationCircleFill, Send,
   Check2Circle, CheckLg, GeoAlt, GeoAltFill, Clock, Floppy, PrinterFill,
   ArrowLeft, SortDown, SortUpAlt, Trash, TrashFill, Eye,
-  ExclamationTriangle, InfoCircleFill, Telephone, ShieldLock,
+  ExclamationTriangle, InfoCircleFill, Telephone, ShieldLock, PersonCheck,
 } from "react-bootstrap-icons";
 
 // Same glyphs as the bootstrap-icons font used in PharmacyWebResource_5.html
@@ -78,6 +78,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number | string; cla
   "shield-lock": ShieldLock,
   "info-circle-fill": InfoCircleFill,
   "telephone": Telephone,
+  "person-check": PersonCheck,
 };
 
 interface IconProps {

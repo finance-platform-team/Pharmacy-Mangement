@@ -6,6 +6,7 @@ import { mergeVisits } from "../domain/mergeVisits";
 import type { Visit } from "../domain/types";
 import { getLocalDateStr } from "../utils/format";
 import { isAnyModalOpen } from "../utils/uiBusy";
+import { CLAIMS_CHANGED } from "../utils/claimsEvents";
 import { useBusinessUnitContext } from "../BusinessUnitContext";
 import { useAutoRefresh } from "../AutoRefreshContext";
 
@@ -28,7 +29,7 @@ function buildClaimsFilter(buFilter: string | null): string {
   return buFilter ? `${base} and ${buFilter}` : base;
 }
 
-function buildBuFilter(
+export function buildBuFilter(
   selectedBuId: string,
   ARC_GUID: string | null,
   AAC_GUID: string | null,
@@ -42,7 +43,7 @@ function buildBuFilter(
   return `(_new_bu_value eq ${selectedBuId})`;
 }
 
-const VISIT_SELECT = [
+export const VISIT_SELECT = [
   "crf79_visitsid",
   "crf79_visitid",
   "crf79_status",
@@ -80,9 +81,10 @@ const VISIT_SELECT = [
   "_crf79_pendingby_value",
   "_crf79_preparingby_value",
   "_modifiedby_value",
+  "_createdby_value",
 ];
 
-async function fetchPatientsByIds(
+export async function fetchPatientsByIds(
   patientIds: string[],
 ): Promise<Record<string, Crf79_patientses>> {
   if (patientIds.length === 0) return {};
@@ -142,6 +144,11 @@ interface UseVisitsResult {
    * Resolves once the merge is done.
    */
   refresh: () => Promise<void>;
+  /**
+   * Applies a just-saved change to one row right away, so the screen doesn't
+   * wait for the next refresh; that refresh then replaces it with the real record.
+   */
+  patchVisit: (id: string, patch: Partial<Visit>) => void;
 }
 
 export function useVisits(): UseVisitsResult {
@@ -160,6 +167,9 @@ export function useVisits(): UseVisitsResult {
   const reload = useCallback(() => setReloadToken((n) => n + 1), []);
   const refreshRef = useRef<(() => Promise<void>) | null>(null);
   const refresh = useCallback(() => refreshRef.current?.() ?? Promise.resolve(), []);
+  const patchVisit = useCallback((id: string, patch: Partial<Visit>) => {
+    setVisits((prev) => prev.map((v) => (v.id === id ? { ...v, ...patch } : v)));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -186,6 +196,7 @@ export function useVisits(): UseVisitsResult {
           filter = `${filter} and modifiedon gt ${lastLoadTime}`;
         }
 
+        const tQuery = performance.now();
         const result = await Crf79_visitsesService.getAll({
           select: VISIT_SELECT,
           filter,
@@ -196,6 +207,9 @@ export function useVisits(): UseVisitsResult {
         if (cancelled) return;
 
         const rawVisits = result.data ?? [];
+        console.info(
+          `[claims] ${silent ? "delta" : "full"} load: visits query ${Math.round(performance.now() - tQuery)}ms (${rawVisits.length} rows)`,
+        );
 
         // Advance the cursor to the newest modifiedon actually returned by
         // the server (not the client's wall clock) — avoids overlapping
@@ -260,6 +274,13 @@ export function useVisits(): UseVisitsResult {
     const runSilent = () => (silentChain = silentChain.then(() => load(true)));
     refreshRef.current = runSilent;
 
+    // Another screen changed a visit (draft / attend from ePrescriptions or No Show):
+    // fetch it now instead of at the next poll.
+    const onChanged = () => {
+      void runSilent();
+    };
+    window.addEventListener(CLAIMS_CHANGED, onChanged);
+
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     function scheduleNext() {
       if (cancelled) return;
@@ -279,9 +300,10 @@ export function useVisits(): UseVisitsResult {
     return () => {
       cancelled = true;
       refreshRef.current = null;
+      window.removeEventListener(CLAIMS_CHANGED, onChanged);
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [reloadToken, selectedBuId, ARC_GUID, AAC_GUID, SMH_GUID]);
 
-  return { visits, loading, error, reload, refresh };
+  return { visits, loading, error, reload, refresh, patchVisit };
 }

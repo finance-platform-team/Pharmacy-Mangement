@@ -51,6 +51,20 @@ export function isNoShow(v: Pick<Visit, "status" | "cancelReason">): boolean {
 }
 
 /**
+ * An ePrescription search result that already has a Dataverse record past the EP
+ * stage (Draft, Attended, …). It can't be drafted again — only cancelled — except
+ * a No Show, which can be taken back to Draft.
+ */
+export function isSaved(v: Pick<Visit, "statusCode" | "fromView">): boolean {
+  return !v.fromView && Number(v.statusCode) >= 0;
+}
+
+/** A saved visit that is already finished (Dispensed / Cancelled), so cancelling it is pointless. */
+export function isClosed(v: Pick<Visit, "statusCode" | "cancelReason" | "status" | "fromView">): boolean {
+  return isSaved(v) && !isNoShow(v) && (v.statusCode === 4 || v.statusCode === 0);
+}
+
+/**
  * Filters, searches, and sorts the claims/visits list.
  * This is a pure function - all inputs (filters, search text, sort,
  * selected business unit) are passed in explicitly instead of being

@@ -4,6 +4,7 @@ import Button from "../ui/Button";
 import Pagination from "../ui/Pagination";
 import Icon from "../ui/Icon";
 import { MIN_PHONE_DIGITS } from "../../api/medicationOlApi";
+import { isClosed, isNoShow, isSaved } from "../../domain/filters";
 import "./EpList.css";
 
 interface EpListProps {
@@ -243,6 +244,11 @@ export default function EpList({
                     <td className="c" data-label="">
                       <div className="ep-actions-cell" style={{ display: "flex", gap: 7, justifyContent: "center", alignItems: "center" }}>
                         {rx.manual && <span className="ep-source-badge">Manual</span>}
+                        {isNoShow(rx) ? (
+                          <span className="ep-cancelled-badge noshow">No Show</span>
+                        ) : (
+                          isSaved(rx) && <span className="ep-source-badge">Saved · {rx.status}</span>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -259,7 +265,7 @@ export default function EpList({
                           variant="primary"
                           size="sm"
                           icon="bi-check2-circle"
-                          disabled={busyId === rx.id || checking}
+                          disabled={busyId === rx.id || checking || (isSaved(rx) && !isNoShow(rx))}
                           onClick={(e) => {
                             e.stopPropagation();
                             onOpenDraft(rx);
@@ -271,7 +277,7 @@ export default function EpList({
                           variant="danger"
                           size="sm"
                           icon="bi-x-circle"
-                          disabled={busyId === rx.id || checking}
+                          disabled={busyId === rx.id || checking || isClosed(rx)}
                           onClick={(e) => {
                             e.stopPropagation();
                             onOpenCancel(rx);

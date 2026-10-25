@@ -1,11 +1,8 @@
-const ANC_VISITS_URL =
-  "https://9ce6fb095b63e9f49185b707b4b342.5e.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/19/workflows/3ab6202e7b1848e5a401de8e8c487526/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=XjMFIcJU0zPV_gXNHO3KZfG1NrQ711KjKtFFXVXWJH8";
-const AMH_VISITS_URL =
-  "https://9ce6fb095b63e9f49185b707b4b342.5e.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/04/workflows/9384bdd749774580adda86c617f9a285/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PgqWMZK2624IO__mJu_K0zD1L8pSvVhwugLVZ2dcL8A";
-const ANC_MEDS_URL =
-  "https://9ce6fb095b63e9f49185b707b4b342.5e.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/06/workflows/5ab298b66c8a4563a5c2eb299ad0bde9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=VmgRe01qMmlozvY1WWg2lT6vspa79bgQnn2_ihRkofg";
-const AMH_MEDS_URL =
-  "https://9ce6fb095b63e9f49185b707b4b342.5e.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/21/workflows/43b120fb0e0c46aa98c28d3606bdf84f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=oXcxHA-g_wsZB1Ws_RDzvJD7W-bWEUgZHirFeWXf91A";
+import { flowUrl } from "./flowUrls";
+const ANC_VISITS_URL = flowUrl("VITE_PV_ANC_VISITS_URL");
+const AMH_VISITS_URL = flowUrl("VITE_PV_AMH_VISITS_URL");
+const ANC_MEDS_URL = flowUrl("VITE_PV_ANC_MEDS_URL");
+const AMH_MEDS_URL = flowUrl("VITE_PV_AMH_MEDS_URL");
 
 export interface PrescriptionVisit {
   _source: "ANC" | "AMH";

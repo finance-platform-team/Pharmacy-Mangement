@@ -1,3 +1,4 @@
+import { flowUrl } from "../api/flowUrls";
 /**
  * domain/spAttachments.ts
  *
@@ -18,13 +19,14 @@
  */
 
 // This flow's "Update a row" action writes crf79_documents back onto the
-// visit, so its Dataverse connection MUST target the same environment the
-// app runs in — 9ce6fb09-5b63-e9f4-9185-b707b4b3425e (see power.config.json).
-// pharmacy.html points this at the 931476…4d environment, but that flow
-// 404s here ("Entity 'crf79_Visits' … Does Not Exist") because the visit
-// records live in 9ce6fb…5e. Keep the 9ce6fb…5e flow.
-export const SP_FILE_FLOW_URL =
-  "https://931476765995ec97896bdf8b57b25e.4d.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/30/workflows/61cab88e408343be83a02da8ed53b1e8/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lQXjp0Szod9xzbB6IkCT_ll_r8eAIaj566VWnP6rhy8";
+// visit, so its Dataverse connection MUST target the environment that holds the
+// visit records — the same environment the app reads its Dataverse tables from.
+//
+// The app may run in another environment than the one this flow lives in; that
+// environment's Content Security Policy must then list the flow's domain under
+// connect-src, otherwise the browser blocks the call ("violates the following
+// Content Security Policy directive"). The URL itself is VITE_SP_FILE_FLOW_URL (.env).
+export const SP_FILE_FLOW_URL = flowUrl("VITE_SP_FILE_FLOW_URL");
 
 export interface SpFile {
   name: string;

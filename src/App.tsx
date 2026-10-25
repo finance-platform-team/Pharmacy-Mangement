@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ClaimsScreen from "./components/claims/ClaimsScreen";
 import EpScreen from "./components/ep/EpScreen";
+import NoShowScreen from "./components/noshow/NoShowScreen";
 import { PrintProvider } from "./PrintProvider";
 import { BusinessUnitProvider } from "./BusinessUnitProvider";
 import BuStartupModal from "./components/shared/BuStartupModal";
@@ -14,7 +15,7 @@ import "./styles/print.css";
 // Bundled as a data URI: the Power Apps host blocks images from other domains.
 import logoUrl from "./assets/andalusia-health-logo.png?inline";
 
-type Tab = "claims" | "ep";
+type Tab = "claims" | "ep" | "noshow";
 
 export default function App() {
   return (
@@ -28,7 +29,7 @@ function AppContent() {
   const [tab, setTab] = useState<Tab>("ep");
   // Once a tab has been opened, keep it mounted (hidden via display, not
   // unmounted) so switching back doesn't re-run that screen's data fetch.
-  const [visited, setVisited] = useState<Record<Tab, boolean>>({ ep: true, claims: false });
+  const [visited, setVisited] = useState<Record<Tab, boolean>>({ ep: true, claims: false, noshow: false });
 
   function selectTab(next: Tab) {
     setTab(next);
@@ -61,6 +62,14 @@ function AppContent() {
             >
               Insurance Claims Queue
             </button>
+            <button
+              type="button"
+              className={`main-tab-btn ${tab === "noshow" ? "active" : ""}`}
+              aria-selected={tab === "noshow"}
+              onClick={() => selectTab("noshow")}
+            >
+              No Show
+            </button>
           </nav>
         </header>
 
@@ -76,6 +85,11 @@ function AppContent() {
           {visited.claims && (
             <div style={{ display: tab === "claims" ? "block" : "none" }}>
               <ClaimsScreen />
+            </div>
+          )}
+          {visited.noshow && (
+            <div style={{ display: tab === "noshow" ? "block" : "none" }}>
+              <NoShowScreen />
             </div>
           )}
         </div>

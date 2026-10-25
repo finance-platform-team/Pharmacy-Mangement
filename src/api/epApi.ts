@@ -37,6 +37,22 @@ async function written<T>(op: Promise<IOperationResult<T>>, what: string): Promi
 }
 
 /**
+ * The Dataverse id of a view-only prescription that someone has saved (and moved
+ * past the EP stage) since it was listed, or null if it is still unsaved.
+ * Cancel uses it to cancel that record instead of trying to save it again.
+ */
+export async function findWorkedOnVisitId(visit: Visit): Promise<string | null> {
+  if (!visit.keys) return null;
+  const res = await Crf79_visitsesService.getAll({
+    select: ["crf79_visitsid", "crf79_status"],
+    filter: `crf79_prescriptionkey eq '${odataEsc(visit.keys.visit)}'`,
+    top: 1,
+  });
+  const found = res.data?.[0];
+  return found && found.crf79_status != null ? found.crf79_visitsid : null;
+}
+
+/**
  * Saves an ePrescription that so far only exists in the SQL view
  * (PA.medicationOL) into Dataverse, as if it had always been there. Every
  * table is UPSERTED on its key column (value + branch code, e.g. "99920AAC"):
@@ -117,7 +133,6 @@ export async function createVisitFromView(visit: Visit, status: number | null): 
   if (!patientId) throw new Error("Could not save the patient record");
 
   // 2) visit — upsert on crf79_prescriptionkey
-  const orderDate = visit.orderDate ? new Date(visit.orderDate) : null;
   const visitData: Record<string, unknown> = {
     crf79_prescriptionkey: visit.keys.visit,
     "crf79_Patient@odata.bind": `/crf79_patientses(${patientId})`,
@@ -135,9 +150,6 @@ export async function createVisitFromView(visit: Visit, status: number | null): 
   if (existingVisit) {
     await written(Crf79_visitsesService.update(visitGuid, visitData as never), "Could not update the visit");
   } else {
-    if (orderDate && !isNaN(orderDate.getTime())) {
-      visitData.overriddencreatedon = orderDate.toISOString();
-    }
     const created = await written(Crf79_visitsesService.create(visitData as never), "Could not create the visit");
     visitGuid = created.data?.crf79_visitsid ?? "";
   }
@@ -263,21 +275,33 @@ console.log(visitData);
   const result = await Crf79_visitsesService.create(visitData as never);
   return result.data?.crf79_visitsid ?? "";
 }
-export async function waitForQueueNo(visitId: string): Promise<string | null> {
+export async function waitForQueueNo(
+  visitId: string,
+  opts: { intervalMs?: number; maxMs?: number } = {},
+): Promise<string | null> {
+  const { intervalMs = 800, maxMs = 8000 } = opts;
   const cleanId = visitId.replace(/[{}]/g, "");
-  for (let i = 0; i < 10; i++) {
+  const t0 = performance.now();
+  while (performance.now() - t0 < maxMs) {
     try {
       const res = await Crf79_visitsesService.get(cleanId, {
         select: ["new_queueno"],
       });
-      if (res.data?.new_queueno) return res.data.new_queueno;
+      if (res.data?.new_queueno) {
+        console.info(`[queue] number issued after ${Math.round(performance.now() - t0)}ms`);
+        return res.data.new_queueno;
+      }
     } catch {
       // ignore and retry
     }
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, intervalMs));
   }
+  console.warn(`[queue] no number after ${maxMs}ms`);
   return null;
-}/**
+}
+
+/** For Draft & Attend: poll faster and wait longer than the default — the flow that issues the number can take a while. */
+export const QUEUE_WAIT_FOR_ATTEND = { intervalMs: 250, maxMs: 20000 };/**
  * Polls the visit's crf79_documents field (the OneDrive folder link) up
  * to 10 times, 800ms apart — same pattern as waitForQueueNo(), since the
  * folder/link is created by a separate backend process shortly after the

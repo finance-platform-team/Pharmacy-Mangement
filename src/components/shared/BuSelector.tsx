@@ -7,7 +7,7 @@ const OPTIONS = ["ALL", "AMH", "ARC", "AAC", "ASH"];
 export  const ALL_LABEL = "All BUs";
 
 export default function BuSelector() {
-  const { units, selectedBuName, setBu } = useBusinessUnitContext();
+  const { units, loading, selectedBuName, setBu } = useBusinessUnitContext();
   const [open, setOpen] = useState(false);
 
   function handlePick(label: string) {
@@ -39,16 +39,26 @@ export default function BuSelector() {
         <>
           <div className="bu-selector-backdrop" onClick={() => setOpen(false)} />
           <div className="bu-selector-dropdown">
+            {!loading && units.length === 0 && (
+              <div className="bu-selector-note">
+                No branches were found in this Dataverse, so only All BUs can be chosen.
+              </div>
+            )}
             {OPTIONS.map((label) => {
               const displayLabel = label === "ALL" ? ALL_LABEL : label;
               const isActive =
                 label === "ALL"
                   ? selectedBuName === ALL_LABEL
                   : selectedBuName.toLowerCase() === label.toLowerCase();
+              // A branch that is not among the loaded business units can't be picked.
+              const missing =
+                label !== "ALL" && !loading && !units.some((u) => u.name.toLowerCase() === label.toLowerCase());
               return (
                 <button
                   key={label}
                   className={`bu-selector-option ${isActive ? "active" : ""}`}
+                  disabled={missing}
+                  title={missing ? "Not found in this Dataverse" : undefined}
                   onClick={() => handlePick(label)}
                 >
                   {displayLabel}

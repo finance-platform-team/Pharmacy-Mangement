@@ -5,11 +5,12 @@ import { Vrt_pamedicationol_amhsService, Vrt_pamedicationol_ancsService } from "
 import type { EpSource } from "./medicationOlApi";
 
 /**
- * Fallback reader for the ePrescriptions search: the Dataverse virtual tables
- * vrt_pamedicationol_anc / _amh expose the same PA.medicationOL data as the SQL
- * connectors. medicationOlApi.ts uses this only when the SQL read fails; the
- * rows are mapped to the MedicationOL shape, so grouping by visit ID and saving
- * are exactly the same.
+ * Reader of the ePrescriptions search for the Dataverse virtual tables
+ * vrt_pamedicationol_anc / _amh, which expose the same PA.medicationOL data as
+ * the SQL connectors. While the SQL path is switched off (USE_SQL in
+ * medicationOlApi.ts) this is the only source; with SQL on, it is the fallback.
+ * The rows are mapped to the MedicationOL shape, so grouping by visit ID and
+ * saving are exactly the same either way.
  */
 
 const odataStr = (s: string) => s.replace(/'/g, "''");
@@ -93,6 +94,11 @@ export async function fetchVirtualRowsByPhone(
   try {
     return matches(await queryTable(source, filter));
   } catch (err) {
+    // Only a rejected query shape is worth another spelling; a refusal, a timeout
+    // or a provider outage would fail the same way (and `contains` scans the table).
+    if (/0x80040220|privilege|forbidden|unauthori[sz]ed|\b40[13]\b|timeout|timed out|gateway|\b50\d\b/i.test(String((err as Error)?.message ?? err))) {
+      throw err;
+    }
     console.warn(`[EP virtual] ${source} query rejected, using contains`, err);
   }
   return matches(await queryTable(source, `contains(vrt_patientphone,'${odataStr(t.needle)}')`));
