@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getContext } from "@microsoft/power-apps/app";
 import { SystemusersService } from "../api/dataverse";
 
@@ -8,6 +8,8 @@ interface CurrentUser {
   userPrincipalName: string;
   loading: boolean;
   error: string | null;
+  /** Look the user up again after a failure. */
+  retry: () => void;
 }
 
 interface ResolvedUser {
@@ -20,6 +22,34 @@ interface ResolvedUser {
 // (Claims, ePrescriptions, visit actions) — share ONE lookup between them.
 let userPromise: Promise<ResolvedUser> | null = null;
 
+// A failed query (throttling, timeout, connection not ready yet) must not look like
+// "user not found" — retry it a few times, and report the real error if it keeps failing.
+const LOOKUP_RETRY_DELAYS_MS = [600, 1500];
+
+async function lookupSystemUser(azureObjectId: string) {
+  for (let attempt = 0; ; attempt++) {
+    let failure: string;
+    try {
+      const result = await SystemusersService.getAll({
+        select: ["systemuserid"],
+        filter: `azureactivedirectoryobjectid eq '${azureObjectId}'`,
+        top: 1,
+      });
+      if (result.success) return result;
+      const err = result.error as { message?: string } | string | undefined;
+      failure = String((typeof err === "object" ? err?.message : err) ?? "systemusers query failed");
+    } catch (err) {
+      failure = String(err);
+    }
+    const delay = LOOKUP_RETRY_DELAYS_MS[attempt];
+    if (delay === undefined) {
+      throw new Error(`Could not look up your user record (${failure}). Please retry.`);
+    }
+    console.warn(`[Access] systemusers lookup failed, retrying: ${failure}`);
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+}
+
 function resolveCurrentUser(): Promise<ResolvedUser> {
   if (!userPromise) {
     userPromise = (async () => {
@@ -28,11 +58,7 @@ function resolveCurrentUser(): Promise<ResolvedUser> {
       if (!azureObjectId) {
         throw new Error("getContext() returned no user.objectId");
       }
-      const result = await SystemusersService.getAll({
-        select: ["systemuserid"],
-        filter: `azureactivedirectoryobjectid eq '${azureObjectId}'`,
-        top: 1,
-      });
+      const result = await lookupSystemUser(azureObjectId);
       const match = result.data?.[0];
       if (!match) {
         // Shows up as the "Could not check your access" screen — say who and what to ask for.
@@ -70,6 +96,13 @@ export function useCurrentUser(): CurrentUser {
   const [userPrincipalName, setUserPrincipalName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+
+  const retry = useCallback(() => {
+    setError(null);
+    setLoading(true);
+    setAttempt((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,7 +125,7 @@ export function useCurrentUser(): CurrentUser {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
 
-  return { systemUserId, fullName, userPrincipalName, loading, error };
+  return { systemUserId, fullName, userPrincipalName, loading, error, retry };
 }

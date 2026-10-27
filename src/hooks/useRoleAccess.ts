@@ -27,7 +27,7 @@ export function useRoleAccess(): RoleAccess {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
-  const { systemUserId, loading: userLoading, error: userError } = user;
+  const { systemUserId, loading: userLoading, error: userError, retry: retryUser } = user;
   // The user could not be identified at all: nothing to look roles up for.
   const noUser = !userLoading && !systemUserId;
 
@@ -57,7 +57,9 @@ export function useRoleAccess(): RoleAccess {
     setLookupError(null);
     setChecking(true);
     setAttempt((n) => n + 1);
-  }, []);
+    // The user lookup itself failed: there is no systemUserId to re-check roles for yet.
+    if (!systemUserId) retryUser();
+  }, [systemUserId, retryUser]);
 
   return {
     loading: userLoading || (!noUser && checking),
